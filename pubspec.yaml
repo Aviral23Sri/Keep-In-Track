@@ -1,0 +1,78 @@
+name: keep_in_track
+description: "Keep in Track - Your personal finance tracker. Track income, expenses, and savings beautifully."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Local Storage
+  hive_flutter: ^1.1.0
+  hive: ^2.2.3
+
+  # Navigation
+  go_router: ^14.2.7
+
+  # Charts
+  fl_chart: ^0.68.0
+
+  # PDF Export
+  pdf: ^3.11.1
+  printing: ^5.13.1
+
+  # Excel Export
+  excel: ^4.0.6
+
+  # Notifications
+  flutter_local_notifications: ^17.2.2
+
+  # Biometric / PIN Security
+  local_auth: ^2.3.0
+
+  # File Handling
+  path_provider: ^2.1.3
+  share_plus: ^12.0.2
+  file_picker: ^8.1.2
+
+  # Fonts
+  google_fonts: ^6.2.1
+
+  # Formatting
+  intl: ^0.20.2
+
+  # UUID generation
+  uuid: ^4.4.0
+
+  # Crypto (PIN hashing)
+  crypto: ^3.0.3
+
+  # Animations
+  flutter_animate: ^4.5.0
+
+  # Loading shimmer
+  shimmer: ^3.0.0
+
+  # Icons
+  cupertino_icons: ^1.0.8
+  collection: ^1.18.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.11
+  riverpod_generator: ^2.4.3
+  hive_generator: ^2.0.1
+
+flutter:
+  uses-material-design: true
