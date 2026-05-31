@@ -205,9 +205,14 @@ class HiveDatabase {
   static Future<void> _seedNewMerchants() async {
     final box = merchants;
     for (final m in DefaultMerchants.all) {
-      // Check if merchant already exists by exact name
-      final exists = box.values.any((existing) => existing.name == m.name);
-      if (!exists) {
+      // Find if merchant already exists by exact name
+      final existingKey = box.keys.cast<String>().firstWhere(
+        (k) => box.get(k)!.name == m.name,
+        orElse: () => '',
+      );
+
+      if (existingKey.isEmpty) {
+        // Merchant doesn't exist, insert it
         final id = _uuid.v4();
         final model = MerchantModel(
           id: id,
@@ -221,6 +226,16 @@ class HiveDatabase {
           usageCount: 0,
         );
         await box.put(id, model);
+      } else {
+        // Merchant exists, update its subcategory (and category) if it's missing or changed
+        final existing = box.get(existingKey)!;
+        if (existing.subcategoryId != m.subcategoryId || existing.categoryId != m.categoryId) {
+          final updated = existing.copyWith(
+            categoryId: m.categoryId,
+            subcategoryId: m.subcategoryId,
+          );
+          await box.put(existingKey, updated);
+        }
       }
     }
   }

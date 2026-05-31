@@ -351,6 +351,15 @@ class _ImportReviewScreenState extends ConsumerState<ImportReviewScreen> {
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(builder: (ctx, setS) {
+        final applicableCategories = categories.where((c) => c.type == tx.type).toList();
+        
+        // Safeguard: If the currently selected category is not in the list for this transaction type
+        // (e.g. a DR transaction incorrectly mapped to an Income category like Rakesh CR), fallback.
+        if (!applicableCategories.any((c) => c.id == selectedCategoryId)) {
+          selectedCategoryId = applicableCategories.isNotEmpty ? applicableCategories.first.id as String : '';
+          selectedSubcategoryId = null;
+        }
+
         final applicableSubs = subcategories.where((s) => s.categoryId == selectedCategoryId).toList();
         // If selectedSubcategoryId doesn't belong to the newly selected category, reset it
         if (selectedSubcategoryId != null && !applicableSubs.any((s) => s.id == selectedSubcategoryId)) {
@@ -372,8 +381,7 @@ class _ImportReviewScreenState extends ConsumerState<ImportReviewScreen> {
               DropdownButton<String>(
                 isExpanded: true,
                 value: selectedCategoryId,
-                items: categories
-                    .where((c) => c.type == tx.type)
+                items: applicableCategories
                     .map<DropdownMenuItem<String>>(
                       (c) => DropdownMenuItem(
                         value: c.id as String,
