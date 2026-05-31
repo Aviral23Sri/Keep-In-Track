@@ -15,6 +15,7 @@ import '../../features/reports/reports_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/settings/merchant_manager_screen.dart';
 import '../../features/settings/pin_setup_screen.dart';
+import '../../features/import/import_screen.dart';
 import '../../shared/widgets/adaptive_scaffold.dart';
 
 part 'app_router.g.dart';
@@ -65,6 +66,11 @@ GoRouter appRouter(AppRouterRef ref) {
         path: '/merchant-manager',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const MerchantManagerScreen(),
+      ),
+      GoRoute(
+        path: '/import-statement',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ImportScreen(),
       ),
       ShellRoute(
         navigatorKey: _shellNavigatorKey,

@@ -6,9 +6,11 @@ import '../../core/theme/app_colors.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../data/models/transaction_model.dart';
 import '../../data/models/merchant_model.dart';
+import '../../data/models/subcategory_model.dart';
 import '../../shared/providers/transaction_providers.dart';
 import '../../shared/providers/category_providers.dart';
 import '../../shared/providers/merchant_providers.dart';
+import '../../shared/providers/subcategory_providers.dart';
 import '../../core/utils/category_color_utils.dart';
 import '../../core/utils/category_icon_utils.dart';
 import '../../shared/widgets/gradient_app_bar.dart';
@@ -33,6 +35,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   final _noteController = TextEditingController();
 
   String? _selectedCategoryId;
+  String? _selectedSubcategoryId;
   DateTime _date = DateTime.now();
   String _paymentMode = 'UPI';
 
@@ -42,6 +45,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   MerchantModel? _selectedMerchant;
   bool _isEditing = false;
   TransactionModel? _editingTransaction;
+
+  // Whether subcategory selection step is visible
+  bool _showSubcategories = false;
 
   @override
   void initState() {
@@ -53,7 +59,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   Future<void> _loadTransactionData() async {
-    // This would typically read from a specific provider, but for simplicity we fetch all and find it
     final list = await ref.read(transactionsControllerProvider.future);
     try {
       final t = list.firstWhere((e) => e.id == widget.transactionId);
@@ -64,6 +69,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         _titleController.text = t.title ?? '';
         _noteController.text = t.note ?? '';
         _selectedCategoryId = t.categoryId;
+        _selectedSubcategoryId = t.subcategoryId;
+        _showSubcategories = t.categoryId != null;
         _date = t.date;
         _paymentMode = t.paymentMode;
         _isRecurring = t.isRecurring;
@@ -87,6 +94,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       _selectedMerchant = merchant;
       if (merchant != null) {
         _selectedCategoryId = merchant.categoryId;
+        _selectedSubcategoryId = merchant.subcategoryId;
+        _showSubcategories = true;
         if (merchant.typicalAmount != null && _amountController.text.isEmpty) {
           _amountController.text = merchant.typicalAmount.toString();
         }
@@ -94,6 +103,22 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           _paymentMode = merchant.paymentMode!;
         }
       }
+    });
+  }
+
+  void _onCategoryTap(String categoryId) {
+    setState(() {
+      _selectedCategoryId = categoryId;
+      _selectedSubcategoryId = null;
+      _showSubcategories = true;
+    });
+  }
+
+  void _onDeselectCategory() {
+    setState(() {
+      _selectedCategoryId = null;
+      _selectedSubcategoryId = null;
+      _showSubcategories = false;
     });
   }
 
@@ -127,6 +152,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       type: _type,
       amount: amount,
       categoryId: _selectedCategoryId!,
+      subcategoryId: _selectedSubcategoryId,
       title: _titleController.text.isEmpty ? null : _titleController.text,
       note: _noteController.text.isEmpty ? null : _noteController.text,
       date: _date,
@@ -169,6 +195,72 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     }
   }
 
+  void _showAddSubcategorySheet(String categoryId) {
+    final controller = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          left: 20, right: 20, top: 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Add Subcategory',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Subcategory name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () async {
+                      if (controller.text.trim().isNotEmpty) {
+                        final sub = SubcategoryModel(
+                          id: const Uuid().v4(),
+                          name: controller.text.trim(),
+                          categoryId: categoryId,
+                          isDefault: false,
+                        );
+                        await ref
+                            .read(subcategoriesControllerProvider.notifier)
+                            .addSubcategory(sub);
+                        if (mounted) {
+                          setState(() => _selectedSubcategoryId = sub.id);
+                        }
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      }
+                    },
+                    child: const Text('Add'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -189,6 +281,16 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         data: (categories) {
           final filteredCategories =
               categories.where((c) => c.type == _type).toList();
+          final selectedCategory = _selectedCategoryId != null
+              ? filteredCategories.cast<dynamic>().firstWhere(
+                    (c) => c.id == _selectedCategoryId,
+                    orElse: () => null,
+                  )
+              : null;
+
+          final subcategories = _selectedCategoryId != null
+              ? ref.watch(subcategoriesByCategoryProvider(_selectedCategoryId!))
+              : <SubcategoryModel>[];
 
           return Form(
             key: _formKey,
@@ -207,8 +309,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   onSelectionChanged: (set) {
                     setState(() {
                       _type = set.first;
-                      _selectedCategoryId =
-                          null; // Reset category when type changes
+                      _selectedCategoryId = null;
+                      _selectedSubcategoryId = null;
+                      _showSubcategories = false;
                     });
                   },
                   style: SegmentedButton.styleFrom(
@@ -279,59 +382,20 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Category Selection
+                // Category Section — DRILL-DOWN
                 const Text('Category',
-                    style:
-                        TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 16)),
                 const SizedBox(height: 12),
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                  ),
-                  itemCount: filteredCategories.length,
-                  itemBuilder: (context, index) {
-                    final cat = filteredCategories[index];
-                    final isSelected = _selectedCategoryId == cat.id;
-                    final catColor = CategoryColorUtils.fromHex(cat.color);
-                    return GestureDetector(
-                      onTap: () => setState(() => _selectedCategoryId = cat.id),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? catColor.withOpacity(0.2)
-                              : theme.cardColor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isSelected ? catColor : theme.dividerColor,
-                            width: isSelected ? 2 : 1,
-                          ),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              CategoryIconUtils.fromHex(cat.icon),
-                              color:
-                                  isSelected ? catColor : theme.iconTheme.color,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              cat.name,
-                              style: const TextStyle(fontSize: 10),
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: _showSubcategories && selectedCategory != null
+                      ? _buildSubcategoryStep(
+                          selectedCategory, subcategories, theme)
+                      : _buildCategoryGrid(filteredCategories, theme),
                 ),
+
                 const SizedBox(height: 24),
 
                 // Date & Payment Mode Row
@@ -366,14 +430,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         items: ['Cash', 'UPI', 'Card', 'Bank Transfer', 'Other']
                             .map((e) => DropdownMenuItem(
                                   value: e,
-                                  child: Text(
-                                    e,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                                  child: Text(e,
+                                      overflow: TextOverflow.ellipsis),
                                 ))
                             .toList(),
                         onChanged: (val) {
-                          if (val != null) setState(() => _paymentMode = val);
+                          if (val != null)
+                            setState(() => _paymentMode = val);
                         },
                       ),
                     ),
@@ -384,9 +447,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 // Recurring Toggle
                 SwitchListTile(
                   title: const Text('Recurring Transaction'),
-                  subtitle: const Text('Auto-add this transaction on schedule'),
+                  subtitle:
+                      const Text('Auto-add this transaction on schedule'),
                   value: _isRecurring,
-                  onChanged: (val) => setState(() => _isRecurring = val),
+                  onChanged: (val) =>
+                      setState(() => _isRecurring = val),
                   contentPadding: EdgeInsets.zero,
                 ),
 
@@ -400,7 +465,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     ),
                     items: ['daily', 'weekly', 'monthly', 'yearly']
                         .map((e) => DropdownMenuItem(
-                            value: e, child: Text(e.toUpperCase())))
+                            value: e,
+                            child: Text(e.toUpperCase())))
                         .toList(),
                     onChanged: (val) {
                       setState(() => _recurringFrequency = val);
@@ -419,17 +485,186 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         borderRadius: BorderRadius.circular(12)),
                   ),
                   child: const Text('Save Transaction',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
                 const SizedBox(height: 40),
               ],
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () =>
+            const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
       ),
+    );
+  }
+
+  Widget _buildCategoryGrid(List categories, ThemeData theme) {
+    return GridView.builder(
+      key: const ValueKey('category_grid'),
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: categories.length,
+      itemBuilder: (context, index) {
+        final cat = categories[index];
+        final isSelected = _selectedCategoryId == cat.id;
+        final catColor = CategoryColorUtils.fromHex(cat.color);
+        return GestureDetector(
+          onTap: () => _onCategoryTap(cat.id),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? catColor.withOpacity(0.2)
+                  : theme.cardColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected ? catColor : theme.dividerColor,
+                width: isSelected ? 2 : 1,
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  CategoryIconUtils.fromHex(cat.icon),
+                  color: isSelected ? catColor : theme.iconTheme.color,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  cat.name,
+                  style: const TextStyle(fontSize: 10),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSubcategoryStep(
+      dynamic cat, List<SubcategoryModel> subcategories, ThemeData theme) {
+    final catColor = CategoryColorUtils.fromHex(cat.color);
+    return Column(
+      key: const ValueKey('subcategory_step'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Selected category chip with X
+        GestureDetector(
+          onTap: _onDeselectCategory,
+          child: Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: catColor.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: catColor, width: 2),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(CategoryIconUtils.fromHex(cat.icon),
+                    color: catColor, size: 18),
+                const SizedBox(width: 6),
+                Text(
+                  cat.name,
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, color: catColor),
+                ),
+                const SizedBox(width: 6),
+                Icon(Icons.close, size: 16, color: catColor),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        const Text('Subcategory (optional)',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 8),
+        // Subcategory chips wrap
+        if (subcategories.isEmpty)
+          Text('No subcategories',
+              style: TextStyle(
+                  color: theme.textTheme.bodySmall?.color, fontSize: 12))
+        else
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ...subcategories.map((sub) {
+                final isSelected = _selectedSubcategoryId == sub.id;
+                return GestureDetector(
+                  onTap: () => setState(() {
+                    _selectedSubcategoryId =
+                        isSelected ? null : sub.id;
+                  }),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? catColor
+                          : catColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color:
+                            isSelected ? catColor : catColor.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Text(
+                      sub.name,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        color: isSelected
+                            ? Colors.white
+                            : catColor.withOpacity(0.9),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+              // + Add chip
+              GestureDetector(
+                onTap: () => _showAddSubcategorySheet(cat.id),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: theme.dividerColor),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add,
+                          size: 14,
+                          color: theme.textTheme.bodySmall?.color),
+                      const SizedBox(width: 4),
+                      Text('Add',
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: theme.textTheme.bodySmall?.color)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+      ],
     );
   }
 }

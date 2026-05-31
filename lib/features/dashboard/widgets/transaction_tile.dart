@@ -80,24 +80,30 @@ class TransactionTile extends ConsumerWidget {
                     ],
                   ),
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      CurrencyFormatter.formatWithSign(
-                          transaction.amount, transaction.type),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: amountColor,
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 120),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        CurrencyFormatter.formatWithSign(
+                            transaction.amount, transaction.type),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: amountColor,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
-                    ),
-                    if (transaction.isRecurring) ...[
-                      const SizedBox(height: 4),
-                      Icon(Icons.repeat,
-                          size: 14, color: theme.textTheme.bodySmall?.color),
-                    ]
-                  ],
+                      if (transaction.isRecurring) ...[
+                        const SizedBox(height: 4),
+                        Icon(Icons.repeat,
+                            size: 14, color: theme.textTheme.bodySmall?.color),
+                      ]
+                    ],
+                  ),
                 ),
               ],
             ),

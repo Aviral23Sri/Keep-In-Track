@@ -19,6 +19,7 @@ class AppConstants {
   static const String merchantBox = 'merchants';
   static const String settingsBox = 'settings';
   static const String seedBox = 'seed_flags';
+  static const String subcategoryBox = 'subcategories';
 
   // Hive Type IDs
   static const int transactionTypeId = 0;
@@ -29,6 +30,7 @@ class AppConstants {
   static const int transactionTypeEnumId = 5;
   static const int paymentModeEnumId = 6;
   static const int recurringFrequencyEnumId = 7;
+  static const int subcategoryTypeId = 8;
 
   // Budget thresholds
   static const double budgetWarningThreshold = 0.80; // 80%

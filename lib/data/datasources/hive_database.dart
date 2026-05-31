@@ -5,9 +5,11 @@ import '../models/category_model.dart';
 import '../models/budget_model.dart';
 import '../models/merchant_model.dart';
 import '../models/app_settings_model.dart';
+import '../models/subcategory_model.dart';
 import '../../core/constants/default_categories.dart';
 import '../../core/utils/category_color_utils.dart';
 import '../../core/constants/default_merchants.dart';
+import '../../core/constants/default_subcategories.dart';
 import 'package:uuid/uuid.dart';
 
 class HiveDatabase {
@@ -38,6 +40,9 @@ class HiveDatabase {
     if (!Hive.isAdapterRegistered(AppConstants.appSettingsTypeId)) {
       Hive.registerAdapter(_AppSettingsModelAdapter());
     }
+    if (!Hive.isAdapterRegistered(AppConstants.subcategoryTypeId)) {
+      Hive.registerAdapter(_SubcategoryModelAdapter());
+    }
   }
 
   static Future<void> _openBoxes() async {
@@ -47,6 +52,7 @@ class HiveDatabase {
       Hive.openBox<BudgetModel>(AppConstants.budgetBox),
       Hive.openBox<MerchantModel>(AppConstants.merchantBox),
       Hive.openBox<AppSettingsModel>(AppConstants.settingsBox),
+      Hive.openBox<SubcategoryModel>(AppConstants.subcategoryBox),
     ]);
   }
 
@@ -60,6 +66,8 @@ class HiveDatabase {
       Hive.box<MerchantModel>(AppConstants.merchantBox);
   static Box<AppSettingsModel> get settings =>
       Hive.box<AppSettingsModel>(AppConstants.settingsBox);
+  static Box<SubcategoryModel> get subcategories =>
+      Hive.box<SubcategoryModel>(AppConstants.subcategoryBox);
 
   /// Seed default data on first launch
   static Future<void> seedIfNeeded() async {
@@ -81,8 +89,40 @@ class HiveDatabase {
       await settingsBox.put('settings', appSettings);
     }
 
+    // Subcategory seed runs independently — safe for existing installs
+    if (!appSettings.subcategorySeedDone) {
+      await _seedSubcategories();
+      appSettings = appSettings.copyWith(subcategorySeedDone: true);
+      await settingsBox.put('settings', appSettings);
+    }
+
+    // Also seed any new default categories that were added after first install
+    await _seedNewDefaultCategories();
+
+    // Also seed any new merchants that were added
+    await _seedNewMerchants();
+
     await _syncDefaultCategoryIcons();
     await _normalizeCategoryColors();
+  }
+
+  /// Seed categories that exist in DefaultCategories but not yet in the box
+  static Future<void> _seedNewDefaultCategories() async {
+    final box = categories;
+    for (final cat in DefaultCategories.all) {
+      if (box.get(cat.id) == null) {
+        final model = CategoryModel(
+          id: cat.id,
+          name: cat.name,
+          icon: cat.icon,
+          color: cat.color.toARGB32().toRadixString(16).toUpperCase(),
+          type: cat.type,
+          isDefault: true,
+          isHidden: false,
+        );
+        await box.put(cat.id, model);
+      }
+    }
   }
 
   /// Keep built-in category icons in sync when defaults are updated.
@@ -126,6 +166,22 @@ class HiveDatabase {
     }
   }
 
+  static Future<void> _seedSubcategories() async {
+    final box = subcategories;
+    for (final sub in DefaultSubcategories.all) {
+      // Only add if not already present (idempotent)
+      if (box.get(sub.id) == null) {
+        final model = SubcategoryModel(
+          id: sub.id,
+          name: sub.name,
+          categoryId: sub.categoryId,
+          isDefault: true,
+        );
+        await box.put(sub.id, model);
+      }
+    }
+  }
+
   static Future<void> _seedMerchants() async {
     final box = merchants;
     if (box.isNotEmpty) return;
@@ -136,12 +192,36 @@ class HiveDatabase {
         name: m.name,
         nameVariants: m.nameVariants,
         categoryId: m.categoryId,
+        subcategoryId: m.subcategoryId,
         typicalAmount: m.typicalAmount,
         paymentMode: m.paymentMode,
         isDefault: true,
         usageCount: 0,
       );
       await box.put(id, model);
+    }
+  }
+
+  static Future<void> _seedNewMerchants() async {
+    final box = merchants;
+    for (final m in DefaultMerchants.all) {
+      // Check if merchant already exists by exact name
+      final exists = box.values.any((existing) => existing.name == m.name);
+      if (!exists) {
+        final id = _uuid.v4();
+        final model = MerchantModel(
+          id: id,
+          name: m.name,
+          nameVariants: m.nameVariants,
+          categoryId: m.categoryId,
+          subcategoryId: m.subcategoryId,
+          typicalAmount: m.typicalAmount,
+          paymentMode: m.paymentMode,
+          isDefault: true,
+          usageCount: 0,
+        );
+        await box.put(id, model);
+      }
     }
   }
 
@@ -158,23 +238,24 @@ class HiveDatabase {
         recurringFrequency: 'monthly', createdAt: now,
       ),
       TransactionModel(
-        id: _uuid.v4(), type: 'expense', amount: 12000,
-        categoryId: 'cat_rent', title: 'House Rent',
+        id: _uuid.v4(), type: 'expense', amount: 8345,
+        categoryId: 'cat_rent', title: 'Room Rent',
         date: DateTime(now.year, now.month, 2),
-        paymentMode: 'bankTransfer', isRecurring: false,
-        createdAt: now,
+        paymentMode: 'UPI', isRecurring: false, createdAt: now,
       ),
       TransactionModel(
-        id: _uuid.v4(), type: 'expense', amount: 2500,
-        categoryId: 'cat_food', title: 'Groceries & Food',
+        id: _uuid.v4(), type: 'expense', amount: 250,
+        categoryId: 'cat_food', subcategoryId: 'sub_food_eating_out',
+        title: 'Dinner with friends',
         date: DateTime(now.year, now.month, 5),
-        paymentMode: 'upi', isRecurring: false, createdAt: now,
+        paymentMode: 'UPI', isRecurring: false, createdAt: now,
       ),
       TransactionModel(
-        id: _uuid.v4(), type: 'expense', amount: 499,
-        categoryId: 'cat_entertainment', title: 'Netflix Subscription',
+        id: _uuid.v4(), type: 'expense', amount: 448,
+        categoryId: 'cat_bills', subcategoryId: 'sub_bi_mobile',
+        title: 'Jio Recharge',
         date: DateTime(now.year, now.month, 6),
-        paymentMode: 'card', isRecurring: true,
+        paymentMode: 'UPI', isRecurring: true,
         recurringFrequency: 'monthly', createdAt: now,
       ),
       TransactionModel(
@@ -185,34 +266,39 @@ class HiveDatabase {
         recurringFrequency: 'monthly', createdAt: now,
       ),
       TransactionModel(
-        id: _uuid.v4(), type: 'expense', amount: 350,
-        categoryId: 'cat_transport', title: 'Uber rides',
+        id: _uuid.v4(), type: 'expense', amount: 46,
+        categoryId: 'cat_transport', subcategoryId: 'sub_tr_uber',
+        title: 'Uber ride', merchantName: 'Uber',
         date: DateTime(now.year, now.month, 8),
-        paymentMode: 'upi', isRecurring: false, createdAt: now,
+        paymentMode: 'UPI', isRecurring: false, createdAt: now,
       ),
       TransactionModel(
         id: _uuid.v4(), type: 'expense', amount: 1200,
-        categoryId: 'cat_bills', title: 'Electricity Bill',
+        categoryId: 'cat_bills', subcategoryId: 'sub_bi_electricity',
+        title: 'Electricity Bill',
         date: DateTime(now.year, now.month, 10),
-        paymentMode: 'upi', isRecurring: false, createdAt: now,
+        paymentMode: 'UPI', isRecurring: false, createdAt: now,
       ),
       TransactionModel(
-        id: _uuid.v4(), type: 'expense', amount: 800,
-        categoryId: 'cat_health', title: 'Medicine',
+        id: _uuid.v4(), type: 'expense', amount: 25,
+        categoryId: 'cat_health', subcategoryId: 'sub_he_medicine',
+        title: 'Medicine',
         date: DateTime(now.year, now.month, 12),
-        paymentMode: 'cash', isRecurring: false, createdAt: now,
+        paymentMode: 'Cash', isRecurring: false, createdAt: now,
       ),
       TransactionModel(
         id: _uuid.v4(), type: 'income', amount: 8000,
-        categoryId: 'cat_freelance', title: 'Freelance Project',
+        categoryId: 'cat_freelance', subcategoryId: 'sub_fr_project',
+        title: 'Freelance Project',
         date: DateTime(now.year, now.month, 14),
         paymentMode: 'bankTransfer', isRecurring: false, createdAt: now,
       ),
       TransactionModel(
-        id: _uuid.v4(), type: 'expense', amount: 600,
-        categoryId: 'cat_shopping', title: 'Clothes',
+        id: _uuid.v4(), type: 'expense', amount: 12,
+        categoryId: 'cat_tea', title: 'Evening Tea',
+        merchantName: 'Rajendra',
         date: DateTime(now.year, now.month, 15),
-        paymentMode: 'upi', isRecurring: false, createdAt: now,
+        paymentMode: 'UPI', isRecurring: false, createdAt: now,
       ),
     ];
     for (final t in samples) {
@@ -226,9 +312,10 @@ class HiveDatabase {
       categories.clear(),
       budgets.clear(),
       merchants.clear(),
+      subcategories.clear(),
     ]);
     final s = settings.get('settings') ?? AppSettingsModel();
-    await settings.put('settings', s.copyWith(seedDone: false));
+    await settings.put('settings', s.copyWith(seedDone: false, subcategorySeedDone: false));
   }
 }
 
@@ -255,6 +342,9 @@ class _TransactionModelAdapter extends TypeAdapter<TransactionModel> {
       recurringEndDate: fields[10] as DateTime?,
       createdAt: fields[11] as DateTime,
       merchantName: fields[12] as String?,
+      subcategoryId: fields[13] as String?,
+      bankRefNumber: fields[14] as String?,
+      importedFromBank: (fields[15] as bool?) ?? false,
     );
   }
 
@@ -265,6 +355,7 @@ class _TransactionModelAdapter extends TypeAdapter<TransactionModel> {
       4: obj.title, 5: obj.note, 6: obj.date, 7: obj.paymentMode,
       8: obj.isRecurring, 9: obj.recurringFrequency,
       10: obj.recurringEndDate, 11: obj.createdAt, 12: obj.merchantName,
+      13: obj.subcategoryId, 14: obj.bankRefNumber, 15: obj.importedFromBank,
     });
   }
 }
@@ -303,6 +394,7 @@ class _BudgetModelAdapter extends TypeAdapter<BudgetModel> {
       id: f[0] as String, categoryId: f[1] as String?,
       amount: (f[2] as num).toDouble(),
       month: f[3] as int, year: f[4] as int,
+      period: (f[5] as String?) ?? 'monthly',
     );
   }
 
@@ -310,7 +402,7 @@ class _BudgetModelAdapter extends TypeAdapter<BudgetModel> {
   void write(BinaryWriter writer, BudgetModel obj) {
     writer.writeMap({
       0: obj.id, 1: obj.categoryId, 2: obj.amount,
-      3: obj.month, 4: obj.year,
+      3: obj.month, 4: obj.year, 5: obj.period,
     });
   }
 }
@@ -331,6 +423,7 @@ class _MerchantModelAdapter extends TypeAdapter<MerchantModel> {
       isDefault: f[6] as bool,
       usageCount: (f[7] as int?) ?? 0,
       lastUsed: f[8] as DateTime?,
+      subcategoryId: f[9] as String?,
     );
   }
 
@@ -340,6 +433,7 @@ class _MerchantModelAdapter extends TypeAdapter<MerchantModel> {
       0: obj.id, 1: obj.name, 2: obj.nameVariants,
       3: obj.categoryId, 4: obj.typicalAmount, 5: obj.paymentMode,
       6: obj.isDefault, 7: obj.usageCount, 8: obj.lastUsed,
+      9: obj.subcategoryId,
     });
   }
 }
@@ -361,6 +455,9 @@ class _AppSettingsModelAdapter extends TypeAdapter<AppSettingsModel> {
       recurringReminders: (f[6] as bool?) ?? true,
       reminderTime: (f[7] as String?) ?? '09:00',
       seedDone: (f[8] as bool?) ?? false,
+      dailyBudget: (f[9] as num?)?.toDouble(),
+      weeklyBudget: (f[10] as num?)?.toDouble(),
+      subcategorySeedDone: (f[11] as bool?) ?? false,
     );
   }
 
@@ -371,6 +468,31 @@ class _AppSettingsModelAdapter extends TypeAdapter<AppSettingsModel> {
       3: obj.isBiometricEnabled, 4: obj.monthStartDay,
       5: obj.budgetAlerts, 6: obj.recurringReminders,
       7: obj.reminderTime, 8: obj.seedDone,
+      9: obj.dailyBudget, 10: obj.weeklyBudget,
+      11: obj.subcategorySeedDone,
+    });
+  }
+}
+
+class _SubcategoryModelAdapter extends TypeAdapter<SubcategoryModel> {
+  @override
+  final int typeId = AppConstants.subcategoryTypeId;
+
+  @override
+  SubcategoryModel read(BinaryReader reader) {
+    final f = reader.readMap();
+    return SubcategoryModel(
+      id: f[0] as String,
+      name: f[1] as String,
+      categoryId: f[2] as String,
+      isDefault: (f[3] as bool?) ?? false,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, SubcategoryModel obj) {
+    writer.writeMap({
+      0: obj.id, 1: obj.name, 2: obj.categoryId, 3: obj.isDefault,
     });
   }
 }

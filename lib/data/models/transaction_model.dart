@@ -1,48 +1,5 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
-// Hive TypeAdapters are generated manually here since we avoid build_runner
-// for simpler setup. All type IDs must match AppConstants.
-
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../core/constants/app_constants.dart';
-
-part 'transaction_model.g.dart';
-
-@HiveType(typeId: AppConstants.transactionTypeEnumId)
-enum TransactionType {
-  @HiveField(0)
-  expense,
-  @HiveField(1)
-  income,
-  @HiveField(2)
-  savings,
-}
-
-@HiveType(typeId: AppConstants.paymentModeEnumId)
-enum PaymentMode {
-  @HiveField(0)
-  cash,
-  @HiveField(1)
-  upi,
-  @HiveField(2)
-  card,
-  @HiveField(3)
-  bankTransfer,
-  @HiveField(4)
-  other,
-}
-
-@HiveType(typeId: AppConstants.recurringFrequencyEnumId)
-enum RecurringFrequency {
-  @HiveField(0)
-  daily,
-  @HiveField(1)
-  weekly,
-  @HiveField(2)
-  monthly,
-  @HiveField(3)
-  yearly,
-}
-
 @HiveType(typeId: AppConstants.transactionTypeId)
 class TransactionModel extends HiveObject {
   @HiveField(0)
@@ -84,6 +41,16 @@ class TransactionModel extends HiveObject {
   @HiveField(12)
   String? merchantName;
 
+  // NEW fields (backward-compatible — null for old records)
+  @HiveField(13)
+  String? subcategoryId;
+
+  @HiveField(14)
+  String? bankRefNumber;
+
+  @HiveField(15)
+  bool importedFromBank;
+
   TransactionModel({
     required this.id,
     required this.type,
@@ -98,6 +65,9 @@ class TransactionModel extends HiveObject {
     this.recurringEndDate,
     required this.createdAt,
     this.merchantName,
+    this.subcategoryId,
+    this.bankRefNumber,
+    this.importedFromBank = false,
   });
 
   TransactionModel copyWith({
@@ -114,6 +84,9 @@ class TransactionModel extends HiveObject {
     DateTime? recurringEndDate,
     DateTime? createdAt,
     String? merchantName,
+    String? subcategoryId,
+    String? bankRefNumber,
+    bool? importedFromBank,
   }) {
     return TransactionModel(
       id: id ?? this.id,
@@ -129,6 +102,9 @@ class TransactionModel extends HiveObject {
       recurringEndDate: recurringEndDate ?? this.recurringEndDate,
       createdAt: createdAt ?? this.createdAt,
       merchantName: merchantName ?? this.merchantName,
+      subcategoryId: subcategoryId ?? this.subcategoryId,
+      bankRefNumber: bankRefNumber ?? this.bankRefNumber,
+      importedFromBank: importedFromBank ?? this.importedFromBank,
     );
   }
 
@@ -146,9 +122,13 @@ class TransactionModel extends HiveObject {
         'recurringEndDate': recurringEndDate?.toIso8601String(),
         'createdAt': createdAt.toIso8601String(),
         'merchantName': merchantName,
+        'subcategoryId': subcategoryId,
+        'bankRefNumber': bankRefNumber,
+        'importedFromBank': importedFromBank,
       };
 
-  factory TransactionModel.fromJson(Map<String, dynamic> json) => TransactionModel(
+  factory TransactionModel.fromJson(Map<String, dynamic> json) =>
+      TransactionModel(
         id: json['id'] as String,
         type: json['type'] as String,
         amount: (json['amount'] as num).toDouble(),
@@ -164,15 +144,9 @@ class TransactionModel extends HiveObject {
             : null,
         createdAt: DateTime.parse(json['createdAt'] as String),
         merchantName: json['merchantName'] as String?,
-      );
-
-  TransactionType get transactionType => TransactionType.values.firstWhere(
-        (e) => e.name == type,
-        orElse: () => TransactionType.expense,
-      );
-
-  PaymentMode get paymentModeEnum => PaymentMode.values.firstWhere(
-        (e) => e.name == paymentMode,
-        orElse: () => PaymentMode.other,
+        subcategoryId: json['subcategoryId'] as String?,
+        bankRefNumber: json['bankRefNumber'] as String?,
+        importedFromBank: json['importedFromBank'] as bool? ?? false,
       );
 }
+

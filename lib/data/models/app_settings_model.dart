@@ -30,6 +30,16 @@ class AppSettingsModel extends HiveObject {
   @HiveField(8)
   late bool seedDone;
 
+  // NEW fields — daily/weekly budgets stored in settings for simplicity
+  @HiveField(9)
+  double? dailyBudget;
+
+  @HiveField(10)
+  double? weeklyBudget;
+
+  @HiveField(11)
+  bool subcategorySeedDone;
+
   AppSettingsModel({
     this.themeMode = 'system',
     this.isPinEnabled = false,
@@ -40,6 +50,9 @@ class AppSettingsModel extends HiveObject {
     this.recurringReminders = true,
     this.reminderTime = '09:00',
     this.seedDone = false,
+    this.dailyBudget,
+    this.weeklyBudget,
+    this.subcategorySeedDone = false,
   });
 
   AppSettingsModel copyWith({
@@ -52,6 +65,9 @@ class AppSettingsModel extends HiveObject {
     bool? recurringReminders,
     String? reminderTime,
     bool? seedDone,
+    double? dailyBudget,
+    double? weeklyBudget,
+    bool? subcategorySeedDone,
   }) {
     return AppSettingsModel(
       themeMode: themeMode ?? this.themeMode,
@@ -63,8 +79,30 @@ class AppSettingsModel extends HiveObject {
       recurringReminders: recurringReminders ?? this.recurringReminders,
       reminderTime: reminderTime ?? this.reminderTime,
       seedDone: seedDone ?? this.seedDone,
+      dailyBudget: dailyBudget ?? this.dailyBudget,
+      weeklyBudget: weeklyBudget ?? this.weeklyBudget,
+      subcategorySeedDone: subcategorySeedDone ?? this.subcategorySeedDone,
     );
   }
+
+  // Helper to clear daily/weekly budgets (can't use null in copyWith due to ?? logic)
+  AppSettingsModel clearDailyBudget() => AppSettingsModel(
+        themeMode: themeMode, isPinEnabled: isPinEnabled, pinHash: pinHash,
+        isBiometricEnabled: isBiometricEnabled, monthStartDay: monthStartDay,
+        budgetAlerts: budgetAlerts, recurringReminders: recurringReminders,
+        reminderTime: reminderTime, seedDone: seedDone,
+        dailyBudget: null, weeklyBudget: weeklyBudget,
+        subcategorySeedDone: subcategorySeedDone,
+      );
+
+  AppSettingsModel clearWeeklyBudget() => AppSettingsModel(
+        themeMode: themeMode, isPinEnabled: isPinEnabled, pinHash: pinHash,
+        isBiometricEnabled: isBiometricEnabled, monthStartDay: monthStartDay,
+        budgetAlerts: budgetAlerts, recurringReminders: recurringReminders,
+        reminderTime: reminderTime, seedDone: seedDone,
+        dailyBudget: dailyBudget, weeklyBudget: null,
+        subcategorySeedDone: subcategorySeedDone,
+      );
 
   Map<String, dynamic> toJson() => {
         'themeMode': themeMode,
@@ -76,9 +114,13 @@ class AppSettingsModel extends HiveObject {
         'recurringReminders': recurringReminders,
         'reminderTime': reminderTime,
         'seedDone': seedDone,
+        'dailyBudget': dailyBudget,
+        'weeklyBudget': weeklyBudget,
+        'subcategorySeedDone': subcategorySeedDone,
       };
 
-  factory AppSettingsModel.fromJson(Map<String, dynamic> json) => AppSettingsModel(
+  factory AppSettingsModel.fromJson(Map<String, dynamic> json) =>
+      AppSettingsModel(
         themeMode: json['themeMode'] as String? ?? 'system',
         isPinEnabled: json['isPinEnabled'] as bool? ?? false,
         pinHash: json['pinHash'] as String?,
@@ -88,5 +130,8 @@ class AppSettingsModel extends HiveObject {
         recurringReminders: json['recurringReminders'] as bool? ?? true,
         reminderTime: json['reminderTime'] as String? ?? '09:00',
         seedDone: json['seedDone'] as bool? ?? false,
+        dailyBudget: (json['dailyBudget'] as num?)?.toDouble(),
+        weeklyBudget: (json['weeklyBudget'] as num?)?.toDouble(),
+        subcategorySeedDone: json['subcategorySeedDone'] as bool? ?? false,
       );
 }

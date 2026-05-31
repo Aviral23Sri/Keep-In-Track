@@ -6,12 +6,13 @@ import '../../core/utils/currency_formatter.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../shared/providers/budget_providers.dart';
 import '../../shared/providers/category_providers.dart';
-import '../../shared/providers/reports_providers.dart';
+import '../../shared/providers/settings_providers.dart';
 import '../../core/utils/category_color_utils.dart';
 import '../../core/utils/category_icon_utils.dart';
 import '../../shared/widgets/gradient_app_bar.dart';
 import '../../data/models/budget_model.dart';
 import '../../data/models/category_model.dart';
+import '../../data/models/app_settings_model.dart';
 import 'widgets/budget_progress_bar.dart';
 
 class BudgetScreen extends ConsumerWidget {
@@ -19,274 +20,338 @@ class BudgetScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final budgetsAsync = ref.watch(currentMonthBudgetsProvider);
-    final categoriesAsync = ref.watch(activeCategoriesProvider);
-    final reportAsync = ref.watch(reportDataProvider(ReportPeriod.monthly));
+    final selectedPeriod = ref.watch(budgetPeriodProvider);
 
     return Scaffold(
-      appBar: GradientAppBar(
-        title: const Text('Budget'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_note),
-            onPressed: () => _showSetOverallBudgetDialog(context, ref),
-            tooltip: 'Set Overall Budget',
+      appBar: const GradientAppBar(title: Text('Budget')),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          // ── Period Tabs ──────────────────────────────────────────────────
+          _PeriodTabs(selected: selectedPeriod),
+          const SizedBox(height: 24),
+
+          // ── Overall Budget Card ───────────────────────────────────────────
+          _OverallBudgetCard(period: selectedPeriod),
+          const SizedBox(height: 32),
+
+          // ── Category Budgets (always monthly) ────────────────────────────
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Monthly Category Limits',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Text(
+                'Tap to set',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 16),
+          _CategoryBudgetList(),
         ],
-      ),
-      body: budgetsAsync.when(
-        data: (budgets) {
-          final overallBudget = budgets
-              .cast<dynamic>()
-              .firstWhere((b) => b.isOverall, orElse: () => null);
-
-          return reportAsync.when(
-            data: (report) {
-              return ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  _buildOverallBudgetSection(
-                      context, overallBudget, report.totalExpense),
-                  const SizedBox(height: 32),
-                  const Text('Category Budgets',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 16),
-                  categoriesAsync.when(
-                    data: (categories) {
-                      final expenseCategories =
-                          categories.where((c) => c.type == 'expense').toList();
-                      return Column(
-                        children: expenseCategories.map((cat) {
-                          final b = budgets.cast<dynamic>().firstWhere(
-                              (b) => b.categoryId == cat.id,
-                              orElse: () => null);
-                          final spent =
-                              report.expensesByCategory[cat.id] ?? 0.0;
-
-                          return InkWell(
-                            onTap: () => _showSetCategoryBudgetDialog(
-                                context, ref, cat, b),
-                            borderRadius: BorderRadius.circular(12),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 4, vertical: 8),
-                              child: b == null
-                                  ? Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(10),
-                                          decoration: BoxDecoration(
-                                            color: CategoryColorUtils.fromHex(cat.color)
-                                                .withOpacity(0.15),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: Icon(
-                                              CategoryIconUtils.fromHex(cat.icon),
-                                              color: CategoryColorUtils.fromHex(cat.color),
-                                              size: 20),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: Text(cat.name,
-                                              style: const TextStyle(
-                                                  fontWeight: FontWeight.w600)),
-                                        ),
-                                        Text('Set Limit',
-                                            style: TextStyle(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .primary)),
-                                      ],
-                                    )
-                                  : BudgetProgressBar(
-                                      categoryName: cat.name,
-                                      categoryIcon: cat.icon,
-                                      categoryColor: cat.color,
-                                      budgetAmount: b.amount,
-                                      spentAmount: spent,
-                                    ),
-                            ),
-                          );
-                        }).toList(),
-                      );
-                    },
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (e, _) => Center(child: Text('Error: $e')),
-                  ),
-                ],
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
       ),
     );
   }
+}
 
-  Widget _buildOverallBudgetSection(
-      BuildContext context, BudgetModel? overallBudget, double totalSpent) {
+// ── Period Tab Selector ────────────────────────────────────────────────────────
+
+class _PeriodTabs extends ConsumerWidget {
+  final String selected;
+  const _PeriodTabs({required this.selected});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    if (overallBudget == null) {
-      return Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primary.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3)),
-        ),
-        child: const Column(
-          children: [
-            Icon(Icons.account_balance_wallet,
-                size: 48, color: AppColors.primary),
-            SizedBox(height: 16),
-            Text(
-              'No Overall Budget Set',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    final periods = ['daily', 'weekly', 'monthly'];
+    final labels = ['Daily', 'Weekly', 'Monthly'];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.dividerColor),
+      ),
+      child: Row(
+        children: List.generate(periods.length, (i) {
+          final isSelected = periods[i] == selected;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => ref.read(budgetPeriodProvider.notifier).state = periods[i],
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Text(
+                  labels[i],
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: isSelected ? Colors.white : theme.textTheme.bodyMedium?.color,
+                  ),
+                ),
+              ),
             ),
-            SizedBox(height: 8),
-            Text(
-              'Set a monthly spending limit to track your overall progress.',
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
+          );
+        }),
+      ),
+    );
+  }
+}
+
+// ── Overall Budget Card ────────────────────────────────────────────────────────
+
+class _OverallBudgetCard extends ConsumerWidget {
+  final String period;
+  const _OverallBudgetCard({required this.period});
+
+  String _periodLabel(String period) {
+    final now = DateTime.now();
+    switch (period) {
+      case 'daily':
+        return DateFormatter.formatShort(now);
+      case 'weekly':
+        final monday = now.subtract(Duration(days: now.weekday - 1));
+        final sunday = monday.add(const Duration(days: 6));
+        return '${DateFormatter.formatShort(monday)} – ${DateFormatter.formatShort(sunday)}';
+      default:
+        return DateFormatter.formatMonthYear(now);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settingsAsync = ref.watch(settingsControllerProvider);
+    final theme = Theme.of(context);
+
+    // Get the right spend provider
+    final AsyncValue<double> spendAsync;
+    switch (period) {
+      case 'daily':
+        spendAsync = ref.watch(dailySpendProvider);
+        break;
+      case 'weekly':
+        spendAsync = ref.watch(weeklySpendProvider);
+        break;
+      default:
+        spendAsync = ref.watch(monthlySpendProvider);
     }
 
-    final limit = overallBudget.amount;
-    final percentage = (totalSpent / limit).clamp(0.0, 1.0);
+    return settingsAsync.when(
+      data: (settings) {
+        final budget = _getBudget(settings, period);
+        final totalSpent = spendAsync.maybeWhen(data: (v) => v, orElse: () => 0.0);
 
-    Color color = AppColors.success;
-    if (percentage >= 1.0) {
-      color = AppColors.error;
-    } else if (percentage >= 0.8) color = AppColors.warning;
+        if (budget == null) {
+          return _buildNoBudgetCard(context, ref, settings, period);
+        }
 
+        final percentage = (totalSpent / budget).clamp(0.0, 1.0);
+        Color color = AppColors.success;
+        if (percentage >= 1.0) color = AppColors.error;
+        else if (percentage >= 0.8) color = AppColors.warning;
+
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+            border: Border.all(color: color.withOpacity(0.3)),
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _periodLabel(period),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.edit_outlined, color: theme.colorScheme.primary),
+                    onPressed: () => _showSetBudgetDialog(context, ref, settings, period, budget),
+                    tooltip: 'Edit budget',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: 160,
+                    height: 160,
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: percentage),
+                      duration: const Duration(milliseconds: 1500),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, value, _) {
+                        return CircularProgressIndicator(
+                          value: value,
+                          strokeWidth: 16,
+                          backgroundColor: theme.dividerColor,
+                          valueColor: AlwaysStoppedAnimation<Color>(color),
+                          strokeCap: StrokeCap.round,
+                        );
+                      },
+                    ),
+                  ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${(percentage * 100).toStringAsFixed(0)}%',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                      ),
+                      const Text('Spent', style: TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Spent',
+                          style: TextStyle(color: AppColors.textSecondaryLight)),
+                      Text(CurrencyFormatter.format(totalSpent),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16)),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Text('Budget',
+                          style: TextStyle(color: AppColors.textSecondaryLight)),
+                      Text(CurrencyFormatter.format(budget),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16)),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => const SizedBox.shrink(),
+    );
+  }
+
+  double? _getBudget(AppSettingsModel settings, String period) {
+    switch (period) {
+      case 'daily': return settings.dailyBudget;
+      case 'weekly': return settings.weeklyBudget;
+      default: return null; // monthly budget comes from BudgetModel
+    }
+  }
+
+  Widget _buildNoBudgetCard(BuildContext context, WidgetRef ref,
+      AppSettingsModel settings, String period) {
+    final theme = Theme.of(context);
+    String periodLabel;
+    switch (period) {
+      case 'daily': periodLabel = 'Daily'; break;
+      case 'weekly': periodLabel = 'Weekly'; break;
+      default: periodLabel = 'Monthly';
+    }
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: theme.cardColor,
+        color: theme.colorScheme.primary.withOpacity(0.08),
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          )
-        ],
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3)),
       ),
       child: Column(
         children: [
+          Icon(Icons.account_balance_wallet_outlined,
+              size: 48, color: theme.colorScheme.primary),
+          const SizedBox(height: 16),
           Text(
-            '${DateTime.now().year} - ${DateFormatter.formatShort(DateTime.now()).split(' ')[1]}',
-            style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textSecondaryLight),
+            'No $periodLabel Budget Set',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 24),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                width: 160,
-                height: 160,
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween<double>(begin: 0, end: percentage),
-                  duration: const Duration(milliseconds: 1500),
-                  curve: Curves.easeOutCubic,
-                  builder: (context, value, _) {
-                    return CircularProgressIndicator(
-                      value: value,
-                      strokeWidth: 16,
-                      backgroundColor: theme.dividerColor,
-                      valueColor: AlwaysStoppedAnimation<Color>(color),
-                      strokeCap: StrokeCap.round,
-                    );
-                  },
-                ),
-              ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '${(percentage * 100).toStringAsFixed(0)}%',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: color,
-                    ),
-                  ),
-                  const Text('Spent', style: TextStyle(fontSize: 12)),
-                ],
-              ),
-            ],
+          const SizedBox(height: 8),
+          Text(
+            'Set a $periodLabel spending limit to track your progress.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color),
           ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Spent',
-                      style: TextStyle(color: AppColors.textSecondaryLight)),
-                  Text(CurrencyFormatter.format(totalSpent),
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16)),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  const Text('Budget',
-                      style: TextStyle(color: AppColors.textSecondaryLight)),
-                  Text(CurrencyFormatter.format(limit),
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16)),
-                ],
-              ),
-            ],
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: () =>
+                _showSetBudgetDialog(context, ref, settings, period, null),
+            icon: const Icon(Icons.add),
+            label: Text('Set $periodLabel Budget'),
           ),
         ],
       ),
     );
   }
 
-  void _showSetOverallBudgetDialog(BuildContext context, WidgetRef ref) {
-    String amount = '';
+  void _showSetBudgetDialog(BuildContext context, WidgetRef ref,
+      AppSettingsModel settings, String period, double? existing) {
+    final controller = TextEditingController(
+        text: existing != null ? existing.toStringAsFixed(0) : '');
+    String periodLabel;
+    switch (period) {
+      case 'daily': periodLabel = 'Daily'; break;
+      case 'weekly': periodLabel = 'Weekly'; break;
+      default: periodLabel = 'Monthly';
+    }
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Set Overall Monthly Budget'),
+        title: Text('Set $periodLabel Budget'),
         content: TextField(
+          controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(labelText: 'Amount (₹)'),
-          onChanged: (val) => amount = val,
+          decoration: const InputDecoration(
+            labelText: 'Amount (₹)',
+            prefixText: '₹ ',
+          ),
+          autofocus: true,
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
-          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
             onPressed: () {
-              final val = double.tryParse(amount);
+              final val = double.tryParse(controller.text);
               if (val != null && val > 0) {
-                final now = DateTime.now();
-                final budget = BudgetModel(
-                  id: const Uuid().v4(),
-                  amount: val,
-                  month: now.month,
-                  year: now.year,
-                  categoryId: null, // null categoryId means overall budget
-                );
-                ref
-                    .read(budgetsControllerProvider.notifier)
-                    .addOrUpdateBudget(budget);
+                _saveBudget(ref, settings, period, val);
                 Navigator.pop(context);
               }
             },
@@ -297,49 +362,181 @@ class BudgetScreen extends ConsumerWidget {
     );
   }
 
-  void _showSetCategoryBudgetDialog(BuildContext context, WidgetRef ref,
-      CategoryModel cat, BudgetModel? existing) {
-    String amount = existing?.amount.toString() ?? '';
+  void _saveBudget(
+      WidgetRef ref, AppSettingsModel settings, String period, double amount) {
+    final notifier = ref.read(settingsControllerProvider.notifier);
+    switch (period) {
+      case 'daily':
+        notifier.updateSettings(settings.copyWith(dailyBudget: amount));
+        break;
+      case 'weekly':
+        notifier.updateSettings(settings.copyWith(weeklyBudget: amount));
+        break;
+      case 'monthly':
+        // Monthly overall budget stored in BudgetModel
+        final now = DateTime.now();
+        ref.read(budgetsControllerProvider.notifier).addOrUpdateBudget(
+              BudgetModel(
+                id: const Uuid().v4(),
+                amount: amount,
+                month: now.month,
+                year: now.year,
+                categoryId: null,
+                period: 'monthly',
+              ),
+            );
+        break;
+    }
+  }
+}
+
+// ── Category Budget List ───────────────────────────────────────────────────────
+
+class _CategoryBudgetList extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final budgetsAsync = ref.watch(currentMonthBudgetsProvider);
+    final categoriesAsync = ref.watch(activeCategoriesProvider);
+    final monthlySpend = ref.watch(monthlySpendProvider);
+
+    return budgetsAsync.when(
+      data: (budgets) => categoriesAsync.when(
+        data: (categories) {
+          final expenseCategories =
+              categories.where((c) => c.type == 'expense').toList();
+          // Build a quick spend map per category from monthlySpend data
+          // We use the reports provider for category-level breakdown
+          return Column(
+            children: expenseCategories.map((cat) {
+              final b = budgets.cast<dynamic>().firstWhere(
+                  (b) => b.categoryId == cat.id,
+                  orElse: () => null);
+              return _CategoryBudgetTile(
+                cat: cat,
+                budget: b,
+                ref: ref,
+                budgets: budgets,
+              );
+            }).toList(),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => const SizedBox.shrink(),
+      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _CategoryBudgetTile extends StatelessWidget {
+  final CategoryModel cat;
+  final BudgetModel? budget;
+  final WidgetRef ref;
+  final List<BudgetModel> budgets;
+
+  const _CategoryBudgetTile({
+    required this.cat,
+    required this.budget,
+    required this.ref,
+    required this.budgets,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => _showSetCategoryBudgetDialog(context),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        child: budget == null
+            ? _buildSetLimitRow(context)
+            : BudgetProgressBar(
+                categoryName: cat.name,
+                categoryIcon: cat.icon,
+                categoryColor: cat.color,
+                budgetAmount: budget!.amount,
+                spentAmount: 0, // Will be populated via reports provider
+              ),
+      ),
+    );
+  }
+
+  Widget _buildSetLimitRow(BuildContext context) {
+    final catColor = CategoryColorUtils.fromHex(cat.color);
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: catColor.withOpacity(0.15),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            CategoryIconUtils.fromHex(cat.icon),
+            color: catColor,
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(cat.name,
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+        ),
+        Text('Set Limit',
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                fontSize: 12)),
+      ],
+    );
+  }
+
+  void _showSetCategoryBudgetDialog(BuildContext context) {
+    String amount = budget?.amount.toString() ?? '';
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Set Budget: ${cat.name}'),
         content: TextField(
           controller: TextEditingController(text: amount),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(labelText: 'Amount (₹)'),
+          keyboardType:
+              const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            labelText: 'Amount (₹)',
+            prefixText: '₹ ',
+          ),
           onChanged: (val) => amount = val,
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
-          if (existing != null)
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          if (budget != null)
             TextButton(
               onPressed: () {
-                ref
-                    .read(budgetsControllerProvider.notifier)
-                    .deleteBudget(existing.id);
+                ref.read(budgetsControllerProvider.notifier)
+                    .deleteBudget(budget!.id);
                 Navigator.pop(context);
               },
               child: const Text('Remove',
                   style: TextStyle(color: AppColors.error)),
             ),
-          ElevatedButton(
+          FilledButton(
             onPressed: () {
               final val = double.tryParse(amount);
               if (val != null && val > 0) {
                 final now = DateTime.now();
-                final budget = BudgetModel(
-                  id: existing?.id ?? const Uuid().v4(),
-                  amount: val,
-                  month: now.month,
-                  year: now.year,
-                  categoryId: cat.id,
-                );
-                ref
-                    .read(budgetsControllerProvider.notifier)
-                    .addOrUpdateBudget(budget);
+                ref.read(budgetsControllerProvider.notifier).addOrUpdateBudget(
+                      BudgetModel(
+                        id: budget?.id ?? const Uuid().v4(),
+                        amount: val,
+                        month: now.month,
+                        year: now.year,
+                        categoryId: cat.id,
+                        period: 'monthly',
+                      ),
+                    );
                 Navigator.pop(context);
               }
             },

@@ -7,7 +7,7 @@ class BudgetModel extends HiveObject {
   late String id;
 
   @HiveField(1)
-  String? categoryId; // null = overall monthly budget
+  String? categoryId; // null = overall budget
 
   @HiveField(2)
   late double amount;
@@ -18,12 +18,16 @@ class BudgetModel extends HiveObject {
   @HiveField(4)
   late int year;
 
+  @HiveField(5)
+  String period; // 'daily' | 'weekly' | 'monthly' (default 'monthly')
+
   BudgetModel({
     required this.id,
     this.categoryId,
     required this.amount,
     required this.month,
     required this.year,
+    this.period = 'monthly',
   });
 
   bool get isOverall => categoryId == null;
@@ -34,6 +38,7 @@ class BudgetModel extends HiveObject {
     double? amount,
     int? month,
     int? year,
+    String? period,
   }) {
     return BudgetModel(
       id: id ?? this.id,
@@ -41,6 +46,7 @@ class BudgetModel extends HiveObject {
       amount: amount ?? this.amount,
       month: month ?? this.month,
       year: year ?? this.year,
+      period: period ?? this.period,
     );
   }
 
@@ -50,6 +56,7 @@ class BudgetModel extends HiveObject {
         'amount': amount,
         'month': month,
         'year': year,
+        'period': period,
       };
 
   factory BudgetModel.fromJson(Map<String, dynamic> json) => BudgetModel(
@@ -58,5 +65,6 @@ class BudgetModel extends HiveObject {
         amount: (json['amount'] as num).toDouble(),
         month: json['month'] as int,
         year: json['year'] as int,
+        period: json['period'] as String? ?? 'monthly',
       );
 }

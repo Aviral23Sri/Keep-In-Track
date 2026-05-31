@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/providers/settings_providers.dart';
+import '../../shared/providers/transaction_providers.dart';
 import '../../data/repositories/backup_repository.dart';
 import '../../shared/widgets/gradient_app_bar.dart';
 import '../../shared/widgets/confirmation_dialog.dart';
@@ -214,6 +215,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onTap: () => context.push('/merchant-manager'),
               ),
               ListTile(
+                leading: const Icon(Icons.account_balance_outlined),
+                title: const Text('Import Bank Statement'),
+                subtitle: const Text('Parse SBI statement PDF'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/import-statement'),
+              ),
+              ListTile(
                 leading: const Icon(Icons.cloud_upload_outlined),
                 title: const Text('Backup to File'),
                 subtitle: const Text('Export JSON data'),
@@ -226,6 +234,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onTap: _importBackup,
               ),
               const Divider(),
+              _buildSectionHeader('Danger Zone'),
+              ListTile(
+                leading: const Icon(Icons.delete_forever, color: AppColors.error),
+                title: const Text('Clear All Transactions', style: TextStyle(color: AppColors.error)),
+                subtitle: const Text('Delete all transactions and reset balance'),
+                onTap: () => _showClearDataDialog(context, ref),
+              ),
+              const Divider(),
               _buildSectionHeader('About'),
               const ListTile(
                 leading: Icon(Icons.info_outline),
@@ -233,6 +249,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: Text(AppConstants.appTagline),
                 trailing: Text('v1.0.0'),
               ),
+              const SizedBox(height: 32),
             ],
           );
         },
@@ -240,6 +257,41 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         error: (e, _) => Center(child: Text('Error: $e')),
       ),
     );
+  }
+
+  Future<void> _showClearDataDialog(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear All Transactions?'),
+        content: const Text(
+            'This will permanently delete ALL transactions. This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await ref.read(transactionsControllerProvider.notifier).clearAllTransactions();
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('All transactions deleted.'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildSectionHeader(String title) {

@@ -30,6 +30,9 @@ class MerchantModel extends HiveObject {
   @HiveField(8)
   DateTime? lastUsed;
 
+  @HiveField(9)
+  String? subcategoryId;
+
   MerchantModel({
     required this.id,
     required this.name,
@@ -40,6 +43,7 @@ class MerchantModel extends HiveObject {
     required this.isDefault,
     this.usageCount = 0,
     this.lastUsed,
+    this.subcategoryId,
   });
 
   MerchantModel copyWith({
@@ -52,6 +56,7 @@ class MerchantModel extends HiveObject {
     bool? isDefault,
     int? usageCount,
     DateTime? lastUsed,
+    String? subcategoryId,
   }) {
     return MerchantModel(
       id: id ?? this.id,
@@ -63,6 +68,7 @@ class MerchantModel extends HiveObject {
       isDefault: isDefault ?? this.isDefault,
       usageCount: usageCount ?? this.usageCount,
       lastUsed: lastUsed ?? this.lastUsed,
+      subcategoryId: subcategoryId ?? this.subcategoryId,
     );
   }
 
@@ -76,6 +82,7 @@ class MerchantModel extends HiveObject {
         'isDefault': isDefault,
         'usageCount': usageCount,
         'lastUsed': lastUsed?.toIso8601String(),
+        'subcategoryId': subcategoryId,
       };
 
   factory MerchantModel.fromJson(Map<String, dynamic> json) => MerchantModel(
@@ -90,5 +97,6 @@ class MerchantModel extends HiveObject {
         lastUsed: json['lastUsed'] != null
             ? DateTime.parse(json['lastUsed'] as String)
             : null,
+        subcategoryId: json['subcategoryId'] as String?,
       );
 }

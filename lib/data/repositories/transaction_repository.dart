@@ -11,12 +11,24 @@ class TransactionRepository {
     await HiveDatabase.transactions.put(transaction.id, transaction);
   }
 
+  Future<void> addTransactions(List<TransactionModel> transactions) async {
+    final Map<String, TransactionModel> map = {};
+    for (var t in transactions) {
+      map[t.id] = t;
+    }
+    await HiveDatabase.transactions.putAll(map);
+  }
+
   Future<void> updateTransaction(TransactionModel transaction) async {
     await HiveDatabase.transactions.put(transaction.id, transaction);
   }
 
   Future<void> deleteTransaction(String id) async {
     await HiveDatabase.transactions.delete(id);
+  }
+
+  Future<void> clearAllTransactions() async {
+    await HiveDatabase.transactions.clear();
   }
 
   Future<TransactionModel?> getTransactionById(String id) async {
