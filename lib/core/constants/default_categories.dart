@@ -22,19 +22,19 @@ class DefaultCategories {
 
   // ── EXPENSE CATEGORIES ──────────────────────────────────────────────────────
 
-  static const DefaultCategoryData tea = DefaultCategoryData(
+  static final DefaultCategoryData tea = DefaultCategoryData(
     id: 'cat_tea',
     name: 'Tea',
-    icon: 'e30d', // local_cafe
-    color: Color(0xFF78350F),
+    icon: Icons.coffee.codePoint.toRadixString(16),
+    color: const Color(0xFF78350F),
     type: 'expense',
   );
 
-  static const DefaultCategoryData food = DefaultCategoryData(
+  static final DefaultCategoryData food = DefaultCategoryData(
     id: 'cat_food',
     name: 'Food & Dining',
-    icon: 'e56c', // restaurant
-    color: Color(0xFFDC2626),
+    icon: Icons.fastfood.codePoint.toRadixString(16),
+    color: const Color(0xFFDC2626),
     type: 'expense',
   );
 
@@ -62,27 +62,27 @@ class DefaultCategories {
     type: 'expense',
   );
 
-  static const DefaultCategoryData grooming = DefaultCategoryData(
+  static final DefaultCategoryData grooming = DefaultCategoryData(
     id: 'cat_grooming',
     name: 'Grooming',
-    icon: 'eb3e', // content_cut (scissors)
-    color: Color(0xFF0891B2),
+    icon: Icons.face.codePoint.toRadixString(16),
+    color: const Color(0xFF0891B2),
     type: 'expense',
   );
 
-  static const DefaultCategoryData socialLife = DefaultCategoryData(
+  static final DefaultCategoryData socialLife = DefaultCategoryData(
     id: 'cat_social_life',
     name: 'Social Life',
-    icon: 'e7ef', // groups / domain: e7ef = domain, groups: ef7c
-    color: Color(0xFFDB2777),
+    icon: Icons.people.codePoint.toRadixString(16),
+    color: const Color(0xFFDB2777),
     type: 'expense',
   );
 
-  static const DefaultCategoryData health = DefaultCategoryData(
+  static final DefaultCategoryData health = DefaultCategoryData(
     id: 'cat_health',
     name: 'Health & Medical',
-    icon: 'e548', // local_hospital
-    color: Color(0xFF059669),
+    icon: Icons.medical_services.codePoint.toRadixString(16),
+    color: const Color(0xFF059669),
     type: 'expense',
   );
 
@@ -102,11 +102,11 @@ class DefaultCategories {
     type: 'expense',
   );
 
-  static const DefaultCategoryData emi = DefaultCategoryData(
+  static final DefaultCategoryData emi = DefaultCategoryData(
     id: 'cat_emi',
     name: 'EMI',
-    icon: 'e482', // payments
-    color: Color(0xFF9333EA),
+    icon: Icons.credit_card.codePoint.toRadixString(16),
+    color: const Color(0xFF9333EA),
     type: 'expense',
   );
 
@@ -118,27 +118,27 @@ class DefaultCategories {
     type: 'expense',
   );
 
-  static const DefaultCategoryData shopping = DefaultCategoryData(
+  static final DefaultCategoryData shopping = DefaultCategoryData(
     id: 'cat_shopping',
     name: 'Shopping',
-    icon: 'e54c', // shopping_bag
-    color: Color(0xFFE11D48),
+    icon: Icons.shopping_cart.codePoint.toRadixString(16),
+    color: const Color(0xFFE11D48),
     type: 'expense',
   );
 
-  static const DefaultCategoryData investment = DefaultCategoryData(
+  static final DefaultCategoryData investment = DefaultCategoryData(
     id: 'cat_investment',
     name: 'Investment',
-    icon: 'e6de', // trending_up
-    color: Color(0xFF15803D),
+    icon: Icons.timeline.codePoint.toRadixString(16),
+    color: const Color(0xFF15803D),
     type: 'expense',
   );
 
-  static const DefaultCategoryData miscExpense = DefaultCategoryData(
+  static final DefaultCategoryData miscExpense = DefaultCategoryData(
     id: 'cat_misc_expense',
     name: 'Miscellaneous',
-    icon: 'e14f', // category
-    color: Color(0xFF6B7280),
+    icon: Icons.explore.codePoint.toRadixString(16),
+    color: const Color(0xFF6B7280),
     type: 'expense',
   );
 

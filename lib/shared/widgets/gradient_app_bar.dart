@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Widget title;
   final List<Widget>? actions;
+  final Widget? leading;
   final bool centerTitle;
 
   const GradientAppBar({
     super.key,
     required this.title,
     this.actions,
+    this.leading,
     this.centerTitle = true,
   });
 
@@ -32,6 +34,7 @@ class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
         elevation: 0,
         title: title,
         centerTitle: centerTitle,
+        leading: leading,
         actions: actions,
         iconTheme: const IconThemeData(color: Colors.white),
         titleTextStyle: theme.appBarTheme.titleTextStyle?.copyWith(

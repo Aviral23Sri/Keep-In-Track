@@ -49,6 +49,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   // Whether subcategory selection step is visible
   bool _showSubcategories = false;
 
+  // Key for MerchantAutocomplete to force reset on 'Save & Next'
+  int _formResetCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -70,7 +73,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         _noteController.text = t.note ?? '';
         _selectedCategoryId = t.categoryId;
         _selectedSubcategoryId = t.subcategoryId;
-        _showSubcategories = t.categoryId != null;
+        _showSubcategories = t.categoryId.isNotEmpty;
         _date = t.date;
         _paymentMode = t.paymentMode;
         _isRecurring = t.isRecurring;
@@ -136,7 +139,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     }
   }
 
-  void _saveTransaction() async {
+  void _saveTransaction({bool isSaveAndNext = false}) async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCategoryId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -175,7 +178,28 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       }
     }
 
-    if (mounted) context.pop();
+    if (mounted) {
+      if (isSaveAndNext) {
+        setState(() {
+          _amountController.clear();
+          _titleController.clear();
+          _noteController.clear();
+          _selectedCategoryId = null;
+          _selectedSubcategoryId = null;
+          _showSubcategories = false;
+          _selectedMerchant = null;
+          _isEditing = false;
+          _editingTransaction = null;
+          _formResetCount++;
+          // _date stays the same!
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Saved! You can add another one.')),
+        );
+      } else {
+        context.pop();
+      }
+    }
   }
 
   Future<void> _deleteTransaction() async {
@@ -322,11 +346,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       backgroundColor:
                           WidgetStateProperty.resolveWith<Color?>((states) {
                         if (states.contains(WidgetState.selected)) {
-                          if (_type == 'expense')
-                            return AppColors.expense.withOpacity(0.2);
-                          if (_type == 'income')
-                            return AppColors.income.withOpacity(0.2);
-                          return AppColors.savings.withOpacity(0.2);
+                          if (_type == 'expense') {
+                            return AppColors.expense.withValues(alpha: 0.2);
+                          }
+                          if (_type == 'income') {
+                            return AppColors.income.withValues(alpha: 0.2);
+                          }
+                          return AppColors.savings.withValues(alpha: 0.2);
                         }
                         return null;
                       }),
@@ -355,8 +381,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   ),
                   validator: (val) {
                     if (val == null || val.isEmpty) return 'Enter amount';
-                    if (double.tryParse(val) == null)
+                    if (double.tryParse(val) == null) {
                       return 'Enter valid number';
+                    }
                     return null;
                   },
                 ),
@@ -365,6 +392,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 // Merchant Autocomplete (only for expense)
                 if (_type == 'expense') ...[
                   MerchantAutocomplete(
+                    key: ValueKey('merchant_auto_$_formResetCount'),
                     onMerchantSelected: _onMerchantSelected,
                     initialValue: _titleController.text,
                   ),
@@ -435,8 +463,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                 ))
                             .toList(),
                         onChanged: (val) {
-                          if (val != null)
+                          if (val != null) {
                             setState(() => _paymentMode = val);
+                          }
                         },
                       ),
                     ),
@@ -475,18 +504,38 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 ],
 
                 const SizedBox(height: 40),
-                ElevatedButton(
-                  onPressed: _saveTransaction,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('Save Transaction',
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold)),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => _saveTransaction(isSaveAndNext: true),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text('Save & Next',
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => _saveTransaction(isSaveAndNext: false),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text('Save',
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 40),
               ],
@@ -520,7 +569,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           child: Container(
             decoration: BoxDecoration(
               color: isSelected
-                  ? catColor.withOpacity(0.2)
+                  ? catColor.withValues(alpha: 0.2)
                   : theme.cardColor,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
@@ -565,7 +614,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             padding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: catColor.withOpacity(0.15),
+              color: catColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(color: catColor, width: 2),
             ),
@@ -614,11 +663,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     decoration: BoxDecoration(
                       color: isSelected
                           ? catColor
-                          : catColor.withOpacity(0.1),
+                          : catColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color:
-                            isSelected ? catColor : catColor.withOpacity(0.3),
+                            isSelected ? catColor : catColor.withValues(alpha: 0.3),
                       ),
                     ),
                     child: Text(
@@ -630,7 +679,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                             : FontWeight.normal,
                         color: isSelected
                             ? Colors.white
-                            : catColor.withOpacity(0.9),
+                            : catColor.withValues(alpha: 0.9),
                       ),
                     ),
                   ),

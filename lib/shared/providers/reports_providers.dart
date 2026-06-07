@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../data/models/transaction_model.dart';
@@ -31,7 +32,7 @@ class ReportData {
 }
 
 @riverpod
-Future<ReportData> reportData(ReportDataRef ref, ReportPeriod period) async {
+Future<ReportData> reportData(Ref ref, ReportPeriod period) async {
   final transactions = await ref.watch(transactionsControllerProvider.future);
   final settings = await ref.watch(settingsControllerProvider.future);
   

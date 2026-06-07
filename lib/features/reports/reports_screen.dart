@@ -73,10 +73,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                       children: [
                         _buildStatCard(
                             context,
-                            'Net Savings',
-                            report.totalSavings +
-                                (report.totalIncome - report.totalExpense),
-                            AppColors.savings),
+                            'Total Balance',
+                            (report.totalIncome - report.totalExpense),
+                            AppColors.primary),
                         _buildStatCard(context, 'Avg Daily Spend',
                             report.averageDailySpend, AppColors.warning),
                         _buildStatCard(context, 'Total Income',

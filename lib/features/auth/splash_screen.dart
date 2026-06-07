@@ -27,7 +27,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     if (!mounted) return;
 
     final settings = ref.read(settingsControllerProvider).value;
-    if (settings != null && settings.isPinEnabled) {
+    // Go to lock screen if PIN OR biometric is enabled
+    if (settings != null && (settings.isPinEnabled || settings.isBiometricEnabled)) {
       context.go('/lock');
     } else {
       context.go('/dashboard');

@@ -11,14 +11,22 @@ import '../../../shared/providers/category_providers.dart';
 class TransactionTile extends ConsumerWidget {
   final TransactionModel transaction;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+  final bool isSelected;
 
-  const TransactionTile({super.key, required this.transaction, this.onTap});
+  const TransactionTile({
+    super.key,
+    required this.transaction,
+    this.onTap,
+    this.onLongPress,
+    this.isSelected = false,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final categoriesAsync = ref.watch(categoriesControllerProvider);
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    // final isDark = theme.brightness == Brightness.dark;
 
     return categoriesAsync.when(
       data: (categories) {
@@ -40,20 +48,30 @@ class TransactionTile extends ConsumerWidget {
 
         return InkWell(
           onTap: onTap,
+          onLongPress: onLongPress,
           borderRadius: BorderRadius.circular(16),
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: theme.cardColor,
+              color: isSelected ? theme.colorScheme.primary.withValues(alpha: 0.1) : theme.cardColor,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
+              border: Border.all(
+                color: isSelected 
+                  ? theme.colorScheme.primary 
+                  : theme.dividerColor.withValues(alpha: 0.5),
+                width: isSelected ? 2 : 1,
+              ),
             ),
             child: Row(
               children: [
+                if (isSelected) ...[
+                  const Icon(Icons.check_circle, color: AppColors.primary),
+                  const SizedBox(width: 12),
+                ],
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: catColor.withOpacity(0.15),
+                    color: catColor.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(catIcon, color: catColor),

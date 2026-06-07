@@ -15,7 +15,10 @@ class BudgetRepository {
   Future<void> addOrUpdateBudget(BudgetModel budget) async {
     // If a budget for this category/overall already exists for the month/year, overwrite it.
     final existing = HiveDatabase.budgets.values.cast<BudgetModel?>().firstWhere(
-      (b) => b?.categoryId == budget.categoryId && b?.month == budget.month && b?.year == budget.year,
+      (b) => b?.categoryId == budget.categoryId && 
+             b?.month == budget.month && 
+             b?.year == budget.year && 
+             b?.period == budget.period,
       orElse: () => null,
     );
 

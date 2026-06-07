@@ -2,7 +2,7 @@
 class ParsedTransaction {
   final String description;
   final String merchantName;
-  final String? note;
+  String? note;
   final double amount;
   final bool isDebit; // true = expense, false = income/credit
   final DateTime date;

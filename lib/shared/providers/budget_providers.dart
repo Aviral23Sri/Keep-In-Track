@@ -7,7 +7,7 @@ import 'transaction_providers.dart';
 part 'budget_providers.g.dart';
 
 @Riverpod(keepAlive: true)
-BudgetRepository budgetRepository(BudgetRepositoryRef ref) {
+BudgetRepository budgetRepository(Ref ref) {
   return BudgetRepository();
 }
 
@@ -40,7 +40,7 @@ class BudgetsController extends _$BudgetsController {
 }
 
 @riverpod
-Future<List<BudgetModel>> currentMonthBudgets(CurrentMonthBudgetsRef ref) async {
+Future<List<BudgetModel>> currentMonthBudgets(Ref ref) async {
   final budgets = await ref.watch(budgetsControllerProvider.future);
   final now = DateTime.now();
   return budgets.where((b) => b.month == now.month && b.year == now.year).toList();

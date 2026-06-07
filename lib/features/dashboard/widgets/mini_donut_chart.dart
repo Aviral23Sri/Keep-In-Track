@@ -21,7 +21,7 @@ class MiniDonutChart extends ConsumerWidget {
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.5)),
       ),
       child: reportAsync.when(
         data: (report) {
@@ -54,17 +54,11 @@ class MiniDonutChart extends ConsumerWidget {
                             orElse: () => categories.first,
                           );
                           final color = CategoryColorUtils.fromHex(cat.color);
-                          final percentage = (e.value / report.totalExpense) * 100;
                           return PieChartSectionData(
                             color: color,
                             value: e.value,
-                            title: '${percentage.toStringAsFixed(0)}%',
-                            radius: 20,
-                            titleStyle: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+                            showTitle: false,
+                            radius: 16,
                           );
                         }).toList(),
                       ),

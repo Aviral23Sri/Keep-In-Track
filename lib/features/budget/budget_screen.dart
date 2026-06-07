@@ -6,13 +6,12 @@ import '../../core/utils/currency_formatter.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../shared/providers/budget_providers.dart';
 import '../../shared/providers/category_providers.dart';
-import '../../shared/providers/settings_providers.dart';
 import '../../core/utils/category_color_utils.dart';
 import '../../core/utils/category_icon_utils.dart';
 import '../../shared/widgets/gradient_app_bar.dart';
 import '../../data/models/budget_model.dart';
 import '../../data/models/category_model.dart';
-import '../../data/models/app_settings_model.dart';
+import '../../shared/providers/reports_providers.dart';
 import 'widgets/budget_progress_bar.dart';
 
 class BudgetScreen extends ConsumerWidget {
@@ -35,13 +34,13 @@ class BudgetScreen extends ConsumerWidget {
           _OverallBudgetCard(period: selectedPeriod),
           const SizedBox(height: 32),
 
-          // ── Category Budgets (always monthly) ────────────────────────────
+          // ── Category Budgets ────────────────────────────
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Monthly Category Limits',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  '${selectedPeriod[0].toUpperCase()}${selectedPeriod.substring(1)} Category Limits',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
               Text(
@@ -54,7 +53,7 @@ class BudgetScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 16),
-          _CategoryBudgetList(),
+          _CategoryBudgetList(period: selectedPeriod),
         ],
       ),
     );
@@ -131,7 +130,7 @@ class _OverallBudgetCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final settingsAsync = ref.watch(settingsControllerProvider);
+    final budgetsAsync = ref.watch(currentMonthBudgetsProvider);
     final theme = Theme.of(context);
 
     // Get the right spend provider
@@ -147,19 +146,23 @@ class _OverallBudgetCard extends ConsumerWidget {
         spendAsync = ref.watch(monthlySpendProvider);
     }
 
-    return settingsAsync.when(
-      data: (settings) {
-        final budget = _getBudget(settings, period);
+    return budgetsAsync.when(
+      data: (budgets) {
+        final existingBudget = budgets.cast<dynamic>().firstWhere(
+            (b) => b.isOverall && b.period == period, orElse: () => null);
+        final budget = existingBudget?.amount;
+        
         final totalSpent = spendAsync.maybeWhen(data: (v) => v, orElse: () => 0.0);
 
         if (budget == null) {
-          return _buildNoBudgetCard(context, ref, settings, period);
+          return _buildNoBudgetCard(context, ref, period);
         }
 
         final percentage = (totalSpent / budget).clamp(0.0, 1.0);
         Color color = AppColors.success;
-        if (percentage >= 1.0) color = AppColors.error;
-        else if (percentage >= 0.8) color = AppColors.warning;
+        if (percentage >= 1.0) {
+          color = AppColors.error;
+        } else if (percentage >= 0.8) color = AppColors.warning;
 
         return Container(
           padding: const EdgeInsets.all(24),
@@ -168,12 +171,12 @@ class _OverallBudgetCard extends ConsumerWidget {
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
             ],
-            border: Border.all(color: color.withOpacity(0.3)),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
           ),
           child: Column(
             children: [
@@ -190,7 +193,7 @@ class _OverallBudgetCard extends ConsumerWidget {
                   ),
                   IconButton(
                     icon: Icon(Icons.edit_outlined, color: theme.colorScheme.primary),
-                    onPressed: () => _showSetBudgetDialog(context, ref, settings, period, budget),
+                    onPressed: () => _showSetBudgetDialog(context, ref, period, existingBudget),
                     tooltip: 'Edit budget',
                   ),
                 ],
@@ -268,16 +271,7 @@ class _OverallBudgetCard extends ConsumerWidget {
     );
   }
 
-  double? _getBudget(AppSettingsModel settings, String period) {
-    switch (period) {
-      case 'daily': return settings.dailyBudget;
-      case 'weekly': return settings.weeklyBudget;
-      default: return null; // monthly budget comes from BudgetModel
-    }
-  }
-
-  Widget _buildNoBudgetCard(BuildContext context, WidgetRef ref,
-      AppSettingsModel settings, String period) {
+  Widget _buildNoBudgetCard(BuildContext context, WidgetRef ref, String period) {
     final theme = Theme.of(context);
     String periodLabel;
     switch (period) {
@@ -288,9 +282,9 @@ class _OverallBudgetCard extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withOpacity(0.08),
+        color: theme.colorScheme.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3)),
+        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -310,7 +304,7 @@ class _OverallBudgetCard extends ConsumerWidget {
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: () =>
-                _showSetBudgetDialog(context, ref, settings, period, null),
+                _showSetBudgetDialog(context, ref, period, null),
             icon: const Icon(Icons.add),
             label: Text('Set $periodLabel Budget'),
           ),
@@ -320,9 +314,9 @@ class _OverallBudgetCard extends ConsumerWidget {
   }
 
   void _showSetBudgetDialog(BuildContext context, WidgetRef ref,
-      AppSettingsModel settings, String period, double? existing) {
+      String period, BudgetModel? existing) {
     final controller = TextEditingController(
-        text: existing != null ? existing.toStringAsFixed(0) : '');
+        text: existing != null ? existing.amount.toStringAsFixed(0) : '');
     String periodLabel;
     switch (period) {
       case 'daily': periodLabel = 'Daily'; break;
@@ -347,11 +341,21 @@ class _OverallBudgetCard extends ConsumerWidget {
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
+          if (existing != null)
+            TextButton(
+              onPressed: () {
+                ref.read(budgetsControllerProvider.notifier)
+                    .deleteBudget(existing.id);
+                Navigator.pop(context);
+              },
+              child: const Text('Remove',
+                  style: TextStyle(color: AppColors.error)),
+            ),
           FilledButton(
             onPressed: () {
               final val = double.tryParse(controller.text);
               if (val != null && val > 0) {
-                _saveBudget(ref, settings, period, val);
+                _saveBudget(ref, period, val, existing);
                 Navigator.pop(context);
               }
             },
@@ -363,63 +367,68 @@ class _OverallBudgetCard extends ConsumerWidget {
   }
 
   void _saveBudget(
-      WidgetRef ref, AppSettingsModel settings, String period, double amount) {
-    final notifier = ref.read(settingsControllerProvider.notifier);
-    switch (period) {
-      case 'daily':
-        notifier.updateSettings(settings.copyWith(dailyBudget: amount));
-        break;
-      case 'weekly':
-        notifier.updateSettings(settings.copyWith(weeklyBudget: amount));
-        break;
-      case 'monthly':
-        // Monthly overall budget stored in BudgetModel
-        final now = DateTime.now();
-        ref.read(budgetsControllerProvider.notifier).addOrUpdateBudget(
-              BudgetModel(
-                id: const Uuid().v4(),
-                amount: amount,
-                month: now.month,
-                year: now.year,
-                categoryId: null,
-                period: 'monthly',
-              ),
-            );
-        break;
-    }
+      WidgetRef ref, String period, double amount, BudgetModel? existing) {
+    final now = DateTime.now();
+    ref.read(budgetsControllerProvider.notifier).addOrUpdateBudget(
+          BudgetModel(
+            id: existing?.id ?? const Uuid().v4(),
+            amount: amount,
+            month: now.month,
+            year: now.year,
+            categoryId: null,
+            period: period,
+          ),
+        );
   }
 }
 
 // ── Category Budget List ───────────────────────────────────────────────────────
 
 class _CategoryBudgetList extends ConsumerWidget {
+  final String period;
+  const _CategoryBudgetList({required this.period});
+
+  ReportPeriod _toReportPeriod(String p) {
+    switch (p) {
+      case 'daily': return ReportPeriod.daily;
+      case 'weekly': return ReportPeriod.weekly;
+      default: return ReportPeriod.monthly;
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final budgetsAsync = ref.watch(currentMonthBudgetsProvider);
     final categoriesAsync = ref.watch(activeCategoriesProvider);
-    final monthlySpend = ref.watch(monthlySpendProvider);
+    final reportAsync = ref.watch(reportDataProvider(_toReportPeriod(period)));
 
     return budgetsAsync.when(
       data: (budgets) => categoriesAsync.when(
-        data: (categories) {
-          final expenseCategories =
-              categories.where((c) => c.type == 'expense').toList();
-          // Build a quick spend map per category from monthlySpend data
-          // We use the reports provider for category-level breakdown
-          return Column(
-            children: expenseCategories.map((cat) {
-              final b = budgets.cast<dynamic>().firstWhere(
-                  (b) => b.categoryId == cat.id,
-                  orElse: () => null);
-              return _CategoryBudgetTile(
-                cat: cat,
-                budget: b,
-                ref: ref,
-                budgets: budgets,
-              );
-            }).toList(),
-          );
-        },
+        data: (categories) => reportAsync.when(
+          data: (report) {
+            final expenseCategories =
+                categories.where((c) => c.type == 'expense').toList();
+            return Column(
+              children: expenseCategories.map((cat) {
+                final b = budgets.cast<dynamic>().firstWhere(
+                    (b) => b.categoryId == cat.id && b.period == period,
+                    orElse: () => null);
+                
+                final spent = report.expensesByCategory[cat.id] ?? 0.0;
+
+                return _CategoryBudgetTile(
+                  cat: cat,
+                  budget: b,
+                  spentAmount: spent,
+                  period: period,
+                  ref: ref,
+                );
+              }).toList(),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => const SizedBox.shrink(),
+        ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => const SizedBox.shrink(),
       ),
@@ -432,14 +441,16 @@ class _CategoryBudgetList extends ConsumerWidget {
 class _CategoryBudgetTile extends StatelessWidget {
   final CategoryModel cat;
   final BudgetModel? budget;
+  final double spentAmount;
+  final String period;
   final WidgetRef ref;
-  final List<BudgetModel> budgets;
 
   const _CategoryBudgetTile({
     required this.cat,
     required this.budget,
+    required this.spentAmount,
+    required this.period,
     required this.ref,
-    required this.budgets,
   });
 
   @override
@@ -456,7 +467,7 @@ class _CategoryBudgetTile extends StatelessWidget {
                 categoryIcon: cat.icon,
                 categoryColor: cat.color,
                 budgetAmount: budget!.amount,
-                spentAmount: 0, // Will be populated via reports provider
+                spentAmount: spentAmount,
               ),
       ),
     );
@@ -469,7 +480,7 @@ class _CategoryBudgetTile extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: catColor.withOpacity(0.15),
+            color: catColor.withValues(alpha: 0.15),
             shape: BoxShape.circle,
           ),
           child: Icon(
@@ -534,7 +545,7 @@ class _CategoryBudgetTile extends StatelessWidget {
                         month: now.month,
                         year: now.year,
                         categoryId: cat.id,
-                        period: 'monthly',
+                        period: period,
                       ),
                     );
                 Navigator.pop(context);

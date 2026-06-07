@@ -27,6 +27,10 @@ class TransactionRepository {
     await HiveDatabase.transactions.delete(id);
   }
 
+  Future<void> deleteTransactions(List<String> ids) async {
+    await HiveDatabase.transactions.deleteAll(ids);
+  }
+
   Future<void> clearAllTransactions() async {
     await HiveDatabase.transactions.clear();
   }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
-import 'dart:io';
 import '../../core/theme/app_colors.dart';
 import '../../shared/providers/merchant_providers.dart';
 import '../../shared/widgets/gradient_app_bar.dart';
@@ -32,12 +31,12 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         withData: true,
       );
 
-      if (result == null || result.files.single.bytes == null) {
+      if (result == null || result.files.isEmpty || result.files.first.bytes == null) {
         setState(() => _isParsing = false);
         return;
       }
 
-      final bytes = result.files.single.bytes!;
+      final bytes = result.files.first.bytes!;
       final merchantsAsync = await ref.read(merchantsControllerProvider.future);
 
       final parser = SbiParser(merchants: merchantsAsync);
@@ -83,7 +82,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
               Container(
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.08),
+                  color: AppColors.primary.withValues(alpha: 0.08),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -113,8 +112,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: theme.dividerColor),
                 ),
-                child: Column(
-                  children: const [
+                child: const Column(
+                  children: [
                     _InfoRow(icon: Icons.check_circle_outline,
                         text: 'Supports SBI account statements (PDF)'),
                     SizedBox(height: 6),
@@ -135,9 +134,9 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.1),
+                    color: AppColors.error.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                   ),
                   child: Text(
                     _error!,

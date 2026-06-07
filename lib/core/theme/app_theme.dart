@@ -103,7 +103,7 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.backgroundLight,
-        selectedColor: AppColors.primary.withOpacity(0.15),
+        selectedColor: AppColors.primary.withValues(alpha: 0.15),
         labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500),
         side: const BorderSide(color: AppColors.dividerLight),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -122,7 +122,7 @@ class AppTheme {
           return AppColors.textSecondaryLight;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return AppColors.primary.withOpacity(0.3);
+          if (states.contains(WidgetState.selected)) return AppColors.primary.withValues(alpha: 0.3);
           return AppColors.dividerLight;
         }),
       ),
@@ -241,7 +241,7 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.surfaceDark,
-        selectedColor: AppColors.primary.withOpacity(0.2),
+        selectedColor: AppColors.primary.withValues(alpha: 0.2),
         labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500),
         side: const BorderSide(color: AppColors.dividerDark),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -260,7 +260,7 @@ class AppTheme {
           return AppColors.textSecondaryDark;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return AppColors.primary.withOpacity(0.3);
+          if (states.contains(WidgetState.selected)) return AppColors.primary.withValues(alpha: 0.3);
           return AppColors.dividerDark;
         }),
       ),

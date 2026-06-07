@@ -37,7 +37,7 @@ class MerchantManagerScreen extends ConsumerWidget {
                   
                   return ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                       child: Text(merchant.name[0].toUpperCase(), style: TextStyle(color: Theme.of(context).colorScheme.primary)),
                     ),
                     title: Text(merchant.name, style: const TextStyle(fontWeight: FontWeight.bold)),

@@ -43,7 +43,7 @@ class BudgetProgressBar extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: catColor.withOpacity(0.15),
+              color: catColor.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(catIcon, color: catColor, size: 20),

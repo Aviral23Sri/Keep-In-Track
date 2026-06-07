@@ -96,12 +96,15 @@ class AdaptiveScaffold extends StatelessWidget {
         // Mobile layout (Narrow)
         return Scaffold(
           body: child,
-          floatingActionButton: FloatingActionButton(
-            onPressed: () => context.push('/add-transaction'),
-            child: const Icon(Icons.add),
+          floatingActionButton: Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: FloatingActionButton(
+              onPressed: () => context.push('/add-transaction'),
+              child: const Icon(Icons.add),
+            ),
           ),
           floatingActionButtonLocation:
-              FloatingActionButtonLocation.centerDocked,
+              FloatingActionButtonLocation.endFloat,
           bottomNavigationBar: NavigationBar(
             selectedIndex: currentIndex,
             onDestinationSelected: (idx) => _onItemTapped(idx, context),

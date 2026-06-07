@@ -43,7 +43,7 @@ final activeCategoriesProvider =
 // ignore: unused_element
 typedef ActiveCategoriesRef = AutoDisposeFutureProviderRef<List<CategoryModel>>;
 String _$categoriesControllerHash() =>
-    r'ed928ab8af324010c8dd32e42a9f543ffaa462db';
+    r'48b8d9719da1f19679586cf9ac6bdfb7b7e77a7d';
 
 /// See also [CategoriesController].
 @ProviderFor(CategoriesController)

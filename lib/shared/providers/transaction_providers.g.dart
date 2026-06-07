@@ -25,7 +25,7 @@ final transactionRepositoryProvider = Provider<TransactionRepository>.internal(
 // ignore: unused_element
 typedef TransactionRepositoryRef = ProviderRef<TransactionRepository>;
 String _$transactionsControllerHash() =>
-    r'02d72f75a3a5a57bb80205e51fa6a8648486a03f';
+    r'b1f9b18ba1296c2dbf1e250d854b05c5bcd895aa';
 
 /// See also [TransactionsController].
 @ProviderFor(TransactionsController)

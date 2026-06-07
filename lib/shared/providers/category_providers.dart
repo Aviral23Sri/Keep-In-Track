@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../data/models/category_model.dart';
 import '../../data/repositories/category_repository.dart';
@@ -7,7 +8,7 @@ import 'budget_providers.dart';
 part 'category_providers.g.dart';
 
 @Riverpod(keepAlive: true)
-CategoryRepository categoryRepository(CategoryRepositoryRef ref) {
+CategoryRepository categoryRepository(Ref ref) {
   return CategoryRepository();
 }
 
@@ -66,7 +67,7 @@ class CategoriesController extends _$CategoriesController {
 }
 
 @riverpod
-Future<List<CategoryModel>> activeCategories(ActiveCategoriesRef ref) async {
+Future<List<CategoryModel>> activeCategories(Ref ref) async {
   final controller = ref.watch(categoriesControllerProvider.future);
   final all = await controller;
   return all.where((c) => !c.isHidden).toList();

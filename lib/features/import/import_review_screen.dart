@@ -163,7 +163,7 @@ class _ImportReviewScreenState extends ConsumerState<ImportReviewScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.warning.withOpacity(0.15),
+                          color: AppColors.warning.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -207,7 +207,7 @@ class _ImportReviewScreenState extends ConsumerState<ImportReviewScreen> {
                             bottom: BorderSide(color: theme.dividerColor),
                           ),
                           color: tx.needsReview
-                              ? AppColors.warning.withOpacity(0.04)
+                              ? AppColors.warning.withValues(alpha: 0.04)
                               : null,
                         ),
                         child: Row(
@@ -224,7 +224,7 @@ class _ImportReviewScreenState extends ConsumerState<ImportReviewScreen> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: catColor.withOpacity(0.12),
+                                color: catColor.withValues(alpha: 0.12),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
@@ -280,7 +280,7 @@ class _ImportReviewScreenState extends ConsumerState<ImportReviewScreen> {
                                         ),
                                         style: TextStyle(
                                           fontSize: 11,
-                                          color: theme.textTheme.bodySmall?.color?.withOpacity(0.7),
+                                          color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                                         ),
                                       ),
                                 ],
@@ -431,7 +431,7 @@ class _ImportReviewScreenState extends ConsumerState<ImportReviewScreen> {
                   style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               TextField(
-                controller: TextEditingController(text: note)..selection = TextSelection.collapsed(offset: note.length),
+                controller: TextEditingController(text: note)..selection = TextSelection.collapsed(offset: note?.length ?? 0),
                 decoration: const InputDecoration(
                   hintText: 'Add a note',
                   isDense: true,
@@ -449,13 +449,17 @@ class _ImportReviewScreenState extends ConsumerState<ImportReviewScreen> {
             FilledButton(
               onPressed: () {
                 setState(() {
-                  _transactions[index] =
-                      tx.copyWith(
-                        categoryId: selectedCategoryId, 
-                        subcategoryId: selectedSubcategoryId,
-                        note: note.trim().isEmpty ? null : note.trim(),
-                        needsReview: false,
-                      );
+                  final newNote = (note == null || note!.trim().isEmpty) ? null : note!.trim();
+                  final updatedTx = tx.copyWith(
+                    categoryId: selectedCategoryId, 
+                    type: tx.type,
+                    needsReview: false,
+                  );
+                  
+                  updatedTx.subcategoryId = selectedSubcategoryId;
+                  updatedTx.note = newNote;
+                  
+                  _transactions[index] = updatedTx;
                 });
                 Navigator.pop(ctx);
               },

@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../data/models/merchant_model.dart';
 import '../../data/repositories/merchant_repository.dart';
@@ -5,7 +6,7 @@ import '../../data/repositories/merchant_repository.dart';
 part 'merchant_providers.g.dart';
 
 @Riverpod(keepAlive: true)
-MerchantRepository merchantRepository(MerchantRepositoryRef ref) {
+MerchantRepository merchantRepository(Ref ref) {
   return MerchantRepository();
 }
 
@@ -53,7 +54,7 @@ class MerchantsController extends _$MerchantsController {
 }
 
 @riverpod
-Future<List<MerchantModel>> searchMerchants(SearchMerchantsRef ref, String query) async {
+Future<List<MerchantModel>> searchMerchants(Ref ref, String query) async {
   if (query.trim().isEmpty) return [];
   return ref.read(merchantRepositoryProvider).searchMerchants(query);
 }

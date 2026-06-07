@@ -38,7 +38,7 @@ class _MerchantAutocompleteState extends ConsumerState<MerchantAutocomplete> {
   @override
   Widget build(BuildContext context) {
     final merchantsAsync = ref.watch(merchantsControllerProvider);
-    final theme = Theme.of(context);
+    // final theme = Theme.of(context);
 
     return merchantsAsync.when(
       data: (merchants) {

@@ -16,7 +16,6 @@ class TrendLineChart extends StatelessWidget {
     if (transactions.isEmpty) return const SizedBox();
 
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     // Group transactions by day
     final Map<int, double> expensesByDay = {};
@@ -62,7 +61,7 @@ class TrendLineChart extends StatelessWidget {
             drawVerticalLine: false,
             horizontalInterval: 1000, // Customize based on data scale
             getDrawingHorizontalLine: (value) => FlLine(
-              color: theme.dividerColor.withOpacity(0.5),
+              color: theme.dividerColor.withValues(alpha: 0.5),
               strokeWidth: 1,
               dashArray: [5, 5],
             ),
@@ -116,7 +115,7 @@ class TrendLineChart extends StatelessWidget {
               dotData: const FlDotData(show: false),
               belowBarData: BarAreaData(
                 show: true,
-                color: AppColors.income.withOpacity(0.1),
+                color: AppColors.income.withValues(alpha: 0.1),
               ),
             ),
             LineChartBarData(
@@ -128,7 +127,7 @@ class TrendLineChart extends StatelessWidget {
               dotData: const FlDotData(show: false),
               belowBarData: BarAreaData(
                 show: true,
-                color: AppColors.expense.withOpacity(0.1),
+                color: AppColors.expense.withValues(alpha: 0.1),
               ),
             ),
           ],

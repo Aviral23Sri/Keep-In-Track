@@ -5,6 +5,7 @@ import 'package:local_auth/local_auth.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
 import '../../core/theme/app_colors.dart';
+import '../../data/models/app_settings_model.dart';
 import '../../shared/providers/settings_providers.dart';
 
 class LockScreen extends ConsumerStatefulWidget {
@@ -17,36 +18,64 @@ class LockScreen extends ConsumerStatefulWidget {
 class _LockScreenState extends ConsumerState<LockScreen> {
   String _pin = '';
   bool _hasError = false;
-  final LocalAuthentication auth = LocalAuthentication();
+  bool _biometricAvailable = false;
+  final LocalAuthentication _auth = LocalAuthentication();
 
   @override
   void initState() {
     super.initState();
-    _triggerBiometric();
+    // Use addPostFrameCallback so the widget tree is fully built and
+    // the settings provider has had a chance to emit its first value.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _checkBiometricAvailability();
+      await _triggerBiometricIfEnabled();
+    });
+  }
+
+  Future<void> _checkBiometricAvailability() async {
+    try {
+      final canCheck = await _auth.canCheckBiometrics;
+      final isSupported = await _auth.isDeviceSupported();
+      if (mounted) {
+        setState(() => _biometricAvailable = canCheck || isSupported);
+      }
+    } catch (_) {
+      // biometric not available
+    }
+  }
+
+  Future<void> _triggerBiometricIfEnabled() async {
+    // Wait until settings are loaded (retry a few times)
+    AppSettingsModel? settings;
+    for (int i = 0; i < 10; i++) {
+      settings = ref.read(settingsControllerProvider).value;
+      if (settings != null) break;
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+
+    if (settings == null || !settings.isBiometricEnabled) return;
+    if (!_biometricAvailable) return;
+
+    await _triggerBiometric();
   }
 
   Future<void> _triggerBiometric() async {
-    final settings = ref.read(settingsControllerProvider).value;
-    if (settings != null && settings.isBiometricEnabled) {
-      try {
-        final canCheckBiometrics = await auth.canCheckBiometrics;
-        final isDeviceSupported = await auth.isDeviceSupported();
-        
-        if (canCheckBiometrics || isDeviceSupported) {
-          final authenticated = await auth.authenticate(
-            localizedReason: 'Unlock Keep in Track',
-            options: const AuthenticationOptions(
-              stickyAuth: true,
-              biometricOnly: false,
-            ),
-          );
-          if (authenticated && mounted) {
-            context.go('/dashboard');
-          }
-        }
-      } catch (e) {
-        // Fallback to PIN
+    if (!_biometricAvailable) return;
+    try {
+      final authenticated = await _auth.authenticate(
+        localizedReason: 'Unlock Keep in Track',
+        options: const AuthenticationOptions(
+          stickyAuth: true,
+          biometricOnly: false, // allow PIN fallback inside OS dialog
+          sensitiveTransaction: false,
+        ),
+      );
+      if (authenticated && mounted) {
+        context.go('/dashboard');
       }
+    } catch (e) {
+      // silently fall through to PIN entry
+      debugPrint('Biometric error: $e');
     }
   }
 
@@ -83,20 +112,28 @@ class _LockScreenState extends ConsumerState<LockScreen> {
           _pin = '';
         });
       }
+    } else {
+      // No PIN set yet — shouldn't happen, but failsafe navigate to dashboard
+      context.go('/dashboard');
     }
   }
 
   Widget _buildDot(int index) {
     bool isFilled = index < _pin.length;
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
       width: 16,
       height: 16,
       margin: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: isFilled ? AppColors.primary : Colors.transparent,
+        color: isFilled
+            ? (_hasError ? AppColors.error : AppColors.primary)
+            : Colors.transparent,
         border: Border.all(
-          color: isFilled ? AppColors.primary : Colors.grey.shade400,
+          color: isFilled
+              ? (_hasError ? AppColors.error : AppColors.primary)
+              : Colors.grey.shade400,
           width: 2,
         ),
       ),
@@ -120,6 +157,73 @@ class _LockScreenState extends ConsumerState<LockScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = ref.watch(settingsControllerProvider).value;
+    final pinEnabled = settings?.isPinEnabled ?? false;
+    final biometricEnabled = settings?.isBiometricEnabled ?? false;
+
+    // ── Biometric-only mode (no PIN) ─────────────────────────────────────────
+    if (!pinEnabled && biometricEnabled) {
+      return Scaffold(
+        body: SafeArea(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Spacer(),
+              const Icon(Icons.lock_outline, size: 72, color: AppColors.primary),
+              const SizedBox(height: 24),
+              Text(
+                'Keep in Track',
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Verify your identity to continue',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.color
+                          ?.withValues(alpha: 0.6),
+                    ),
+              ),
+              const Spacer(),
+              GestureDetector(
+                onTap: _triggerBiometric,
+                child: Container(
+                  padding: const EdgeInsets.all(28),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                      width: 2,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.fingerprint,
+                    size: 72,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Tap to use biometric',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.primary,
+                    ),
+              ),
+              const Spacer(),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // ── PIN mode (with optional biometric button) ─────────────────────────────
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -132,13 +236,16 @@ class _LockScreenState extends ConsumerState<LockScreen> {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
-            if (_hasError)
-              const Text(
-                'Incorrect PIN, try again',
-                style: TextStyle(color: AppColors.error),
-              )
-            else
-              const SizedBox(height: 16),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: _hasError
+                  ? const Text(
+                      'Incorrect PIN, try again',
+                      key: ValueKey('error'),
+                      style: TextStyle(color: AppColors.error),
+                    )
+                  : const SizedBox(height: 16, key: ValueKey('empty')),
+            ),
             const SizedBox(height: 32),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -152,27 +259,38 @@ class _LockScreenState extends ConsumerState<LockScreen> {
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: ['1', '2', '3'].map((d) => _buildKeypadButton(d)).toList(),
+                    children:
+                        ['1', '2', '3'].map((d) => _buildKeypadButton(d)).toList(),
                   ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: ['4', '5', '6'].map((d) => _buildKeypadButton(d)).toList(),
+                    children:
+                        ['4', '5', '6'].map((d) => _buildKeypadButton(d)).toList(),
                   ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: ['7', '8', '9'].map((d) => _buildKeypadButton(d)).toList(),
+                    children:
+                        ['7', '8', '9'].map((d) => _buildKeypadButton(d)).toList(),
                   ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      TextButton(
-                        onPressed: _triggerBiometric,
-                        style: TextButton.styleFrom(
-                          shape: const CircleBorder(),
-                          padding: const EdgeInsets.all(24),
-                        ),
-                        child: const Icon(Icons.fingerprint, size: 32, color: AppColors.primary),
-                      ),
+                      // Biometric button — only shown if available AND enabled
+                      if (_biometricAvailable && biometricEnabled)
+                        TextButton(
+                          onPressed: _triggerBiometric,
+                          style: TextButton.styleFrom(
+                            shape: const CircleBorder(),
+                            padding: const EdgeInsets.all(24),
+                          ),
+                          child: const Icon(
+                            Icons.fingerprint,
+                            size: 32,
+                            color: AppColors.primary,
+                          ),
+                        )
+                      else
+                        const SizedBox(width: 80),
                       _buildKeypadButton('0'),
                       TextButton(
                         onPressed: _onBackspace,
@@ -195,3 +313,5 @@ class _LockScreenState extends ConsumerState<LockScreen> {
     );
   }
 }
+
+

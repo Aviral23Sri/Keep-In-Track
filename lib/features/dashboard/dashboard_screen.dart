@@ -7,7 +7,7 @@ import '../../shared/providers/dashboard_providers.dart';
 import '../../shared/providers/transaction_providers.dart';
 import 'widgets/summary_card.dart';
 import 'widgets/transaction_tile.dart';
-import 'widgets/mini_donut_chart.dart';
+
 import 'widgets/budget_status_bar.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -57,12 +57,7 @@ class DashboardScreen extends ConsumerWidget {
             child: SizedBox(height: 16),
           ),
 
-          const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: MiniDonutChart(),
-            ),
-          ),
+
 
           SliverToBoxAdapter(
             child: Padding(

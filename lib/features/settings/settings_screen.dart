@@ -53,6 +53,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           '${dir.path}/keep_in_track_backup_${DateTime.now().toIso8601String().split('T')[0]}.json');
       await file.writeAsString(json);
 
+      // ignore: deprecated_member_use
       final result = await Share.shareXFiles(
         [XFile(file.path)],
         text: 'Keep in Track Backup',
@@ -81,6 +82,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (result != null && result.files.single.path != null) {
         final file = File(result.files.single.path!);
         final jsonString = await file.readAsString();
+
+        if (!mounted) return;
 
         final confirm = await ConfirmationDialog.show(
           context: context,
@@ -194,16 +197,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 SwitchListTile(
                   secondary: const Icon(Icons.fingerprint),
                   title: const Text('Biometric Unlock'),
+                  subtitle: const Text('Use fingerprint or face to unlock'),
                   value: settings.isBiometricEnabled,
-                  onChanged: settings.isPinEnabled
-                      ? (val) {
-                          ref
-                              .read(settingsControllerProvider.notifier)
-                              .updateSettings(
-                                settings.copyWith(isBiometricEnabled: val),
-                              );
-                        }
-                      : null,
+                  onChanged: (val) {
+                    ref
+                        .read(settingsControllerProvider.notifier)
+                        .updateSettings(
+                          settings.copyWith(isBiometricEnabled: val),
+                        );
+                  },
                 ),
               const Divider(),
               _buildSectionHeader('Data Management'),

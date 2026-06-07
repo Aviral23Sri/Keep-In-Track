@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../data/models/transaction_model.dart';
 import '../../data/repositories/transaction_repository.dart';
@@ -5,7 +6,7 @@ import '../../data/repositories/transaction_repository.dart';
 part 'transaction_providers.g.dart';
 
 @Riverpod(keepAlive: true)
-TransactionRepository transactionRepository(TransactionRepositoryRef ref) {
+TransactionRepository transactionRepository(Ref ref) {
   return TransactionRepository();
 }
 
@@ -21,7 +22,6 @@ class TransactionsController extends _$TransactionsController {
   }
 
   Future<void> addTransaction(TransactionModel transaction) async {
-    state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       await ref.read(transactionRepositoryProvider).addTransaction(transaction);
       return _fetchTransactions();
@@ -29,7 +29,6 @@ class TransactionsController extends _$TransactionsController {
   }
 
   Future<void> addTransactions(List<TransactionModel> transactions) async {
-    state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       await ref.read(transactionRepositoryProvider).addTransactions(transactions);
       return _fetchTransactions();
@@ -37,7 +36,6 @@ class TransactionsController extends _$TransactionsController {
   }
 
   Future<void> updateTransaction(TransactionModel transaction) async {
-    state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       await ref.read(transactionRepositoryProvider).updateTransaction(transaction);
       return _fetchTransactions();
@@ -45,15 +43,20 @@ class TransactionsController extends _$TransactionsController {
   }
 
   Future<void> deleteTransaction(String id) async {
-    state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       await ref.read(transactionRepositoryProvider).deleteTransaction(id);
       return _fetchTransactions();
     });
   }
 
+  Future<void> deleteTransactions(List<String> ids) async {
+    state = await AsyncValue.guard(() async {
+      await ref.read(transactionRepositoryProvider).deleteTransactions(ids);
+      return _fetchTransactions();
+    });
+  }
+
   Future<void> clearAllTransactions() async {
-    state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       await ref.read(transactionRepositoryProvider).clearAllTransactions();
       return _fetchTransactions();

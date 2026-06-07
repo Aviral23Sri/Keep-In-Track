@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../core/utils/date_formatter.dart';
 import 'transaction_providers.dart';
@@ -20,7 +21,7 @@ class DashboardSummary {
 }
 
 @riverpod
-Future<DashboardSummary> dashboardSummary(DashboardSummaryRef ref) async {
+Future<DashboardSummary> dashboardSummary(Ref ref) async {
   final transactions = await ref.watch(transactionsControllerProvider.future);
   final settings = await ref.watch(settingsControllerProvider.future);
 

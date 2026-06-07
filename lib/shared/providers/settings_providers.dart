@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../data/models/app_settings_model.dart';
 import '../../data/repositories/settings_repository.dart';
@@ -5,7 +6,7 @@ import '../../data/repositories/settings_repository.dart';
 part 'settings_providers.g.dart';
 
 @Riverpod(keepAlive: true)
-SettingsRepository settingsRepository(SettingsRepositoryRef ref) {
+SettingsRepository settingsRepository(Ref ref) {
   return SettingsRepository();
 }
 
