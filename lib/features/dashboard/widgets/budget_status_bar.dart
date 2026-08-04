@@ -37,7 +37,14 @@ class BudgetStatusBar extends ConsumerWidget {
           }
 
           // We must use the daily report provider for daily spend
-          final dailyReportAsync = ref.watch(reportDataProvider(ReportPeriod.daily));
+          final now = DateTime.now();
+          final dayStart = DateTime(now.year, now.month, now.day);
+          final dayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
+          final dailyReportAsync = ref.watch(reportDataProvider(ReportFilter(
+            startDate: dayStart,
+            endDate: dayEnd,
+            viewMode: ReportViewMode.weekly,
+          )));
 
           return dailyReportAsync.when(
             data: (report) {

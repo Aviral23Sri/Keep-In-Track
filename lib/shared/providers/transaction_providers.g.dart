@@ -7,7 +7,7 @@ part of 'transaction_providers.dart';
 // **************************************************************************
 
 String _$transactionRepositoryHash() =>
-    r'f2fd41bd98ddadc07031c7a7e946176e8bcbc6c5';
+    r'288d0c4b0b47a2abf64a8bb8ab5c552540a9a9f5';
 
 /// See also [transactionRepository].
 @ProviderFor(transactionRepository)
@@ -25,7 +25,7 @@ final transactionRepositoryProvider = Provider<TransactionRepository>.internal(
 // ignore: unused_element
 typedef TransactionRepositoryRef = ProviderRef<TransactionRepository>;
 String _$transactionsControllerHash() =>
-    r'b1f9b18ba1296c2dbf1e250d854b05c5bcd895aa';
+    r'9f6c31acb13c96990d8e125d8f8986233a307929';
 
 /// See also [TransactionsController].
 @ProviderFor(TransactionsController)

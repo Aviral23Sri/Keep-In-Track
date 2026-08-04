@@ -7,7 +7,7 @@ part of 'category_providers.dart';
 // **************************************************************************
 
 String _$categoryRepositoryHash() =>
-    r'bf260a6681489d6017fd399b5a76902bdd03e66e';
+    r'd2241460f4d243949e015b77401251ad86e9ca15';
 
 /// See also [categoryRepository].
 @ProviderFor(categoryRepository)
@@ -24,7 +24,7 @@ final categoryRepositoryProvider = Provider<CategoryRepository>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef CategoryRepositoryRef = ProviderRef<CategoryRepository>;
-String _$activeCategoriesHash() => r'62f2025b6893eb84d58076b753c9d7d9031a01c2';
+String _$activeCategoriesHash() => r'c8b9904311dcf2ae17045648d1e2a4a62434adad';
 
 /// See also [activeCategories].
 @ProviderFor(activeCategories)

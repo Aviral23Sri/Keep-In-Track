@@ -388,11 +388,22 @@ class _CategoryBudgetList extends ConsumerWidget {
   final String period;
   const _CategoryBudgetList({required this.period});
 
-  ReportPeriod _toReportPeriod(String p) {
+  ReportFilter _toReportFilter(String p) {
+    final now = DateTime.now();
     switch (p) {
-      case 'daily': return ReportPeriod.daily;
-      case 'weekly': return ReportPeriod.weekly;
-      default: return ReportPeriod.monthly;
+      case 'daily':
+        final start = DateTime(now.year, now.month, now.day);
+        final end = DateTime(now.year, now.month, now.day, 23, 59, 59);
+        return ReportFilter(startDate: start, endDate: end, viewMode: ReportViewMode.weekly);
+      case 'weekly':
+        final monday = now.subtract(Duration(days: now.weekday - 1));
+        final start = DateTime(monday.year, monday.month, monday.day);
+        final end = start.add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
+        return ReportFilter(startDate: start, endDate: end, viewMode: ReportViewMode.weekly);
+      default:
+        final start = DateTime(now.year, now.month, 1);
+        final end = DateTime(now.year, now.month + 1, 1).subtract(const Duration(microseconds: 1));
+        return ReportFilter(startDate: start, endDate: end, viewMode: ReportViewMode.monthly);
     }
   }
 
@@ -400,7 +411,7 @@ class _CategoryBudgetList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final budgetsAsync = ref.watch(currentMonthBudgetsProvider);
     final categoriesAsync = ref.watch(activeCategoriesProvider);
-    final reportAsync = ref.watch(reportDataProvider(_toReportPeriod(period)));
+    final reportAsync = ref.watch(reportDataProvider(_toReportFilter(period)));
 
     return budgetsAsync.when(
       data: (budgets) => categoriesAsync.when(

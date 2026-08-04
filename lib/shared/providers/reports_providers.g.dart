@@ -6,7 +6,7 @@ part of 'reports_providers.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$reportDataHash() => r'f37eb6821923717b3498058985f960826dde7dc1';
+String _$reportDataHash() => r'6e0ddccae68a5fcc0fe1445548ba119a403a2423';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -40,10 +40,10 @@ class ReportDataFamily extends Family<AsyncValue<ReportData>> {
 
   /// See also [reportData].
   ReportDataProvider call(
-    ReportPeriod period,
+    ReportFilter filter,
   ) {
     return ReportDataProvider(
-      period,
+      filter,
     );
   }
 
@@ -52,7 +52,7 @@ class ReportDataFamily extends Family<AsyncValue<ReportData>> {
     covariant ReportDataProvider provider,
   ) {
     return call(
-      provider.period,
+      provider.filter,
     );
   }
 
@@ -75,11 +75,11 @@ class ReportDataFamily extends Family<AsyncValue<ReportData>> {
 class ReportDataProvider extends AutoDisposeFutureProvider<ReportData> {
   /// See also [reportData].
   ReportDataProvider(
-    ReportPeriod period,
+    ReportFilter filter,
   ) : this._internal(
           (ref) => reportData(
             ref as ReportDataRef,
-            period,
+            filter,
           ),
           from: reportDataProvider,
           name: r'reportDataProvider',
@@ -90,7 +90,7 @@ class ReportDataProvider extends AutoDisposeFutureProvider<ReportData> {
           dependencies: ReportDataFamily._dependencies,
           allTransitiveDependencies:
               ReportDataFamily._allTransitiveDependencies,
-          period: period,
+          filter: filter,
         );
 
   ReportDataProvider._internal(
@@ -100,10 +100,10 @@ class ReportDataProvider extends AutoDisposeFutureProvider<ReportData> {
     required super.allTransitiveDependencies,
     required super.debugGetCreateSourceHash,
     required super.from,
-    required this.period,
+    required this.filter,
   }) : super.internal();
 
-  final ReportPeriod period;
+  final ReportFilter filter;
 
   @override
   Override overrideWith(
@@ -118,7 +118,7 @@ class ReportDataProvider extends AutoDisposeFutureProvider<ReportData> {
         dependencies: null,
         allTransitiveDependencies: null,
         debugGetCreateSourceHash: null,
-        period: period,
+        filter: filter,
       ),
     );
   }
@@ -130,13 +130,13 @@ class ReportDataProvider extends AutoDisposeFutureProvider<ReportData> {
 
   @override
   bool operator ==(Object other) {
-    return other is ReportDataProvider && other.period == period;
+    return other is ReportDataProvider && other.filter == filter;
   }
 
   @override
   int get hashCode {
     var hash = _SystemHash.combine(0, runtimeType.hashCode);
-    hash = _SystemHash.combine(hash, period.hashCode);
+    hash = _SystemHash.combine(hash, filter.hashCode);
 
     return _SystemHash.finish(hash);
   }
@@ -145,8 +145,8 @@ class ReportDataProvider extends AutoDisposeFutureProvider<ReportData> {
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 mixin ReportDataRef on AutoDisposeFutureProviderRef<ReportData> {
-  /// The parameter `period` of this provider.
-  ReportPeriod get period;
+  /// The parameter `filter` of this provider.
+  ReportFilter get filter;
 }
 
 class _ReportDataProviderElement
@@ -154,7 +154,139 @@ class _ReportDataProviderElement
   _ReportDataProviderElement(super.provider);
 
   @override
-  ReportPeriod get period => (origin as ReportDataProvider).period;
+  ReportFilter get filter => (origin as ReportDataProvider).filter;
+}
+
+String _$momComparisonHash() => r'992019a8e385a1856e940a679b49189fa20ef499';
+
+/// See also [momComparison].
+@ProviderFor(momComparison)
+const momComparisonProvider = MomComparisonFamily();
+
+/// See also [momComparison].
+class MomComparisonFamily extends Family<AsyncValue<MoMComparison>> {
+  /// See also [momComparison].
+  const MomComparisonFamily();
+
+  /// See also [momComparison].
+  MomComparisonProvider call(
+    DateTime selectedMonth,
+  ) {
+    return MomComparisonProvider(
+      selectedMonth,
+    );
+  }
+
+  @override
+  MomComparisonProvider getProviderOverride(
+    covariant MomComparisonProvider provider,
+  ) {
+    return call(
+      provider.selectedMonth,
+    );
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'momComparisonProvider';
+}
+
+/// See also [momComparison].
+class MomComparisonProvider extends AutoDisposeFutureProvider<MoMComparison> {
+  /// See also [momComparison].
+  MomComparisonProvider(
+    DateTime selectedMonth,
+  ) : this._internal(
+          (ref) => momComparison(
+            ref as MomComparisonRef,
+            selectedMonth,
+          ),
+          from: momComparisonProvider,
+          name: r'momComparisonProvider',
+          debugGetCreateSourceHash:
+              const bool.fromEnvironment('dart.vm.product')
+                  ? null
+                  : _$momComparisonHash,
+          dependencies: MomComparisonFamily._dependencies,
+          allTransitiveDependencies:
+              MomComparisonFamily._allTransitiveDependencies,
+          selectedMonth: selectedMonth,
+        );
+
+  MomComparisonProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.selectedMonth,
+  }) : super.internal();
+
+  final DateTime selectedMonth;
+
+  @override
+  Override overrideWith(
+    FutureOr<MoMComparison> Function(MomComparisonRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: MomComparisonProvider._internal(
+        (ref) => create(ref as MomComparisonRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        selectedMonth: selectedMonth,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<MoMComparison> createElement() {
+    return _MomComparisonProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is MomComparisonProvider &&
+        other.selectedMonth == selectedMonth;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, selectedMonth.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin MomComparisonRef on AutoDisposeFutureProviderRef<MoMComparison> {
+  /// The parameter `selectedMonth` of this provider.
+  DateTime get selectedMonth;
+}
+
+class _MomComparisonProviderElement
+    extends AutoDisposeFutureProviderElement<MoMComparison>
+    with MomComparisonRef {
+  _MomComparisonProviderElement(super.provider);
+
+  @override
+  DateTime get selectedMonth => (origin as MomComparisonProvider).selectedMonth;
 }
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

@@ -12,7 +12,14 @@ class MiniDonutChart extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Get current month report data for the chart
-    final reportAsync = ref.watch(reportDataProvider(ReportPeriod.monthly));
+    final now = DateTime.now();
+    final monthStart = DateTime(now.year, now.month, 1);
+    final monthEnd = DateTime(now.year, now.month + 1, 1).subtract(const Duration(microseconds: 1));
+    final reportAsync = ref.watch(reportDataProvider(ReportFilter(
+      startDate: monthStart,
+      endDate: monthEnd,
+      viewMode: ReportViewMode.monthly,
+    )));
     final categoriesAsync = ref.watch(categoriesControllerProvider);
     final theme = Theme.of(context);
 

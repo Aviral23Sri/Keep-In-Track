@@ -7,7 +7,7 @@ part of 'merchant_providers.dart';
 // **************************************************************************
 
 String _$merchantRepositoryHash() =>
-    r'd1647e57a962cbc06d614a19cc9606ede257f244';
+    r'022a079c08128dbbd041a75f0a433a6d7b87ec7c';
 
 /// See also [merchantRepository].
 @ProviderFor(merchantRepository)
@@ -24,7 +24,7 @@ final merchantRepositoryProvider = Provider<MerchantRepository>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef MerchantRepositoryRef = ProviderRef<MerchantRepository>;
-String _$searchMerchantsHash() => r'6f2920d4e1222d55162ee5426ed629d56b823766';
+String _$searchMerchantsHash() => r'e2fc4d56214422d15cf0ed7b34a81a4ab4588d25';
 
 /// Copied from Dart SDK
 class _SystemHash {

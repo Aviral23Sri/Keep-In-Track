@@ -6,7 +6,7 @@ part of 'budget_providers.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$budgetRepositoryHash() => r'11de3a3487e5fdb7161de59d4a968b82926c0ca4';
+String _$budgetRepositoryHash() => r'5078c029d94bcfb1f72180affab685a8cba38d48';
 
 /// See also [budgetRepository].
 @ProviderFor(budgetRepository)
@@ -24,7 +24,7 @@ final budgetRepositoryProvider = Provider<BudgetRepository>.internal(
 // ignore: unused_element
 typedef BudgetRepositoryRef = ProviderRef<BudgetRepository>;
 String _$currentMonthBudgetsHash() =>
-    r'e220bd75ad276f639dd60d3a7ea34ed200bc3676';
+    r'7585d7585653c866a80893bf04abef55ed4c318c';
 
 /// See also [currentMonthBudgets].
 @ProviderFor(currentMonthBudgets)
