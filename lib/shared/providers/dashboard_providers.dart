@@ -50,6 +50,8 @@ Future<DashboardSummary> dashboardSummary(Ref ref) async {
     totalIncome: income,
     totalExpense: expense,
     totalSavings: savings,
-    balance: income - expense, // Following the prompt: Income - Expense
+    // Savings go OUT of your spending wallet (like expenses), so deduct them.
+    // Balance = what's left to spend after expenses AND savings.
+    balance: income - expense - savings,
   );
 }

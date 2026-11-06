@@ -85,44 +85,76 @@ class CategoriesScreen extends ConsumerWidget {
 
         return InkWell(
           onTap: () => context.push('/category-transactions/${cat.id}'),
+          onLongPress: () => _showManageSubcategoriesSheet(context, ref, cat),
           borderRadius: BorderRadius.circular(16),
-          child: Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Theme.of(context).dividerColor),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: catColor.withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(catIcon, color: catColor, size: 28),
+          child: Stack(
+            children: [
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Theme.of(context).dividerColor),
                 ),
-                const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: Text(
-                    cat.name,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: catColor.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(catIcon, color: catColor, size: 28),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: Text(
+                        cat.name,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Long-press hint badge
+              Positioned(
+                top: 6,
+                right: 6,
+                child: GestureDetector(
+                  onTap: () => _showManageSubcategoriesSheet(context, ref, cat),
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: catColor.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.edit_outlined,
+                        size: 13, color: catColor),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
+    );
+  }
+
+  void _showManageSubcategoriesSheet(
+      BuildContext context, WidgetRef ref, CategoryModel cat) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ManageSubcategoriesSheet(ref: ref, category: cat),
     );
   }
 
@@ -556,3 +588,274 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
   }
 }
 
+// ── Manage Subcategories Sheet ─────────────────────────────────────────────────
+
+class _ManageSubcategoriesSheet extends StatefulWidget {
+  final WidgetRef ref;
+  final CategoryModel category;
+  const _ManageSubcategoriesSheet({required this.ref, required this.category});
+
+  @override
+  State<_ManageSubcategoriesSheet> createState() =>
+      _ManageSubcategoriesSheetState();
+}
+
+class _ManageSubcategoriesSheetState
+    extends State<_ManageSubcategoriesSheet> {
+  final _controller = TextEditingController();
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _addSubcategory() async {
+    final name = _controller.text.trim();
+    if (name.isEmpty) return;
+    setState(() => _saving = true);
+    final sub = SubcategoryModel(
+      id: const Uuid().v4(),
+      name: name,
+      categoryId: widget.category.id,
+      isDefault: false,
+    );
+    await widget.ref
+        .read(subcategoriesControllerProvider.notifier)
+        .addSubcategory(sub);
+    _controller.clear();
+    setState(() => _saving = false);
+  }
+
+  Future<void> _deleteSubcategory(SubcategoryModel sub) async {
+    if (sub.isDefault) {
+      // Ask for confirmation before deleting a default subcategory
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Remove Default Subcategory?'),
+          content: Text(
+              '"${sub.name}" is a default subcategory. Transactions using it will lose this label. Continue?'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Remove'),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true) return;
+    }
+    await widget.ref
+        .read(subcategoriesControllerProvider.notifier)
+        .deleteSubcategory(sub.id);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final catColor = CategoryColorUtils.fromHex(widget.category.color);
+    final catIcon = CategoryIconUtils.fromHex(widget.category.icon);
+    final subcategories =
+        widget.ref.watch(subcategoriesByCategoryProvider(widget.category.id));
+    final theme = Theme.of(context);
+    final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      padding: EdgeInsets.only(
+        left: 20, right: 20, top: 20,
+        bottom: bottomPadding + 20,
+      ),
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: theme.dividerColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+
+            // Header
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: catColor.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(catIcon, color: catColor, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.category.name,
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'Manage Subcategories',
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // ── Add new subcategory ──────────────────────────────────────────
+            Text('Add Subcategory', style: theme.textTheme.labelLarge),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Breakfast, Snacks, Petrol…',
+                      border: const OutlineInputBorder(),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      prefixIcon: Icon(Icons.subdirectory_arrow_right,
+                          color: catColor, size: 20),
+                    ),
+                    textCapitalization: TextCapitalization.words,
+                    onSubmitted: (_) => _addSubcategory(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: _saving ? null : _addSubcategory,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: catColor,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                  ),
+                  child: _saving
+                      ? const SizedBox(
+                          width: 18, height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : const Text('Add'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // ── Existing subcategories ───────────────────────────────────────
+            Row(
+              children: [
+                Text('Existing Subcategories', style: theme.textTheme.labelLarge),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: catColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${subcategories.length}',
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: catColor),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            if (subcategories.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: Text(
+                    'No subcategories yet.\nAdd one above!',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: Colors.grey),
+                  ),
+                ),
+              )
+            else
+              ...subcategories.map((sub) => Container(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: catColor.withValues(alpha: 0.07),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                          color: catColor.withValues(alpha: 0.2)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.subdirectory_arrow_right,
+                            size: 16, color: catColor),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            sub.name,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                        if (sub.isDefault)
+                          Container(
+                            margin: const EdgeInsets.only(right: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text('default',
+                                style: TextStyle(
+                                    fontSize: 10, color: Colors.grey)),
+                          ),
+                        GestureDetector(
+                          onTap: () => _deleteSubcategory(sub),
+                          child: const Icon(Icons.delete_outline,
+                              size: 18, color: Colors.red),
+                        ),
+                      ],
+                    ),
+                  )),
+
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Done'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

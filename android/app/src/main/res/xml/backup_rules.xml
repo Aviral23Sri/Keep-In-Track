@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Backup rules for Keep in Track.
+    We exclude all Hive box files so that Android Auto Backup does NOT restore
+    stale transaction data when the user reinstalls the app.
+    Hive stores boxes as files named "<boxName>.hive" and "<boxName>.lock" in
+    the app's files directory.
+-->
+<full-backup-content>
+    <!-- Exclude all Hive box files -->
+    <exclude domain="file" path="." />
+</full-backup-content>

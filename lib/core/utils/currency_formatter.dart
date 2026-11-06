@@ -52,10 +52,12 @@ class CurrencyFormatter {
     }
   }
 
-  /// Get sign-prefixed string: +₹500 or -₹200
+  /// Get sign-prefixed string: +₹500 for income, -₹200 for expense/savings
   static String formatWithSign(double amount, String type) {
     final formatted = format(amount.abs());
-    if (type == 'income' || type == 'savings') return '+$formatted';
+    if (type == 'income') return '+$formatted';
+    // Both expense and savings are outflows (-) from your spending wallet.
+    // Savings just has a different colour to distinguish it visually.
     return '-$formatted';
   }
 }

@@ -15,11 +15,30 @@ import '../../core/utils/category_color_utils.dart';
 import '../../core/utils/category_icon_utils.dart';
 import '../../shared/widgets/gradient_app_bar.dart';
 import '../../shared/widgets/confirmation_dialog.dart';
+import '../../shared/providers/pending_sms_providers.dart';
 import 'widgets/merchant_autocomplete.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
   final String? transactionId;
-  const AddTransactionScreen({super.key, this.transactionId});
+
+  // Prefill from SMS detection
+  final double? prefilledAmount;
+  final String? prefilledType;       // 'expense' | 'income'
+  final String? prefilledMerchant;
+  final String? prefilledPaymentMode; // 'upi' | 'card' | 'cash' | 'bankTransfer'
+  final DateTime? prefilledDate;     // when the detected transaction happened
+  final String? pendingId;           // if set, remove from pending queue on save
+
+  const AddTransactionScreen({
+    super.key,
+    this.transactionId,
+    this.prefilledAmount,
+    this.prefilledType,
+    this.prefilledMerchant,
+    this.prefilledPaymentMode,
+    this.prefilledDate,
+    this.pendingId,
+  });
 
   @override
   ConsumerState<AddTransactionScreen> createState() =>
@@ -58,6 +77,52 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     if (widget.transactionId != null) {
       _isEditing = true;
       _loadTransactionData();
+    } else if (widget.prefilledAmount != null || widget.pendingId != null) {
+      // Prefill from SMS detection
+      _applyPrefill();
+    }
+  }
+
+  void _applyPrefill() {
+    if (widget.prefilledAmount != null) {
+      _amountController.text =
+          widget.prefilledAmount!.toStringAsFixed(2);
+    }
+    if (widget.prefilledType != null) {
+      _type = widget.prefilledType!;
+    }
+    if (widget.prefilledDate != null) {
+      // Use the time the transaction actually happened, not "now"
+      _date = widget.prefilledDate!;
+    }
+    if (widget.prefilledPaymentMode != null) {
+      _paymentMode = _mapPaymentMode(widget.prefilledPaymentMode!);
+    }
+    // Title / note are intentionally left empty for detected transactions —
+    // the parsed merchant text from the SMS (e.g. "A/C") is often noise.
+  }
+
+  /// Maps the SMS parser's mode strings (and a few variants) to the
+  /// dropdown values used by this form.
+  static String _mapPaymentMode(String raw) {
+    switch (raw.trim().toLowerCase().replaceAll(RegExp(r'[\s_]'), '')) {
+      case 'upi':
+        return 'UPI';
+      case 'card':
+      case 'debitcard':
+      case 'creditcard':
+        return 'Card';
+      case 'cash':
+        return 'Cash';
+      case 'banktransfer':
+      case 'bank':
+      case 'neft':
+      case 'imps':
+      case 'rtgs':
+      case 'netbanking':
+        return 'Bank Transfer';
+      default:
+        return 'Other';
     }
   }
 
@@ -132,11 +197,17 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-    if (picked != null) {
-      setState(() {
-        _date = picked;
-      });
-    }
+    if (picked == null || !mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_date),
+    );
+    // Keep the existing time if the user cancels the time picker
+    final t = time ?? TimeOfDay.fromDateTime(_date);
+    setState(() {
+      _date = DateTime(
+          picked.year, picked.month, picked.day, t.hour, t.minute);
+    });
   }
 
   void _saveTransaction({bool isSaveAndNext = false}) async {
@@ -179,6 +250,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     }
 
     if (mounted) {
+      // If this was opened from a detected SMS, remove it from pending queue
+      if (widget.pendingId != null) {
+        await ref
+            .read(pendingSmsProvider.notifier)
+            .dismiss(widget.pendingId!);
+      }
+
       if (isSaveAndNext) {
         setState(() {
           _amountController.clear();
@@ -438,7 +516,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.calendar_today),
                           ),
-                          child: Text(DateFormatter.formatShort(_date)),
+                          child: Text(
+                            '${DateFormatter.formatShort(_date)}, '
+                            '${TimeOfDay.fromDateTime(_date).format(context)}',
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ),
                     ),

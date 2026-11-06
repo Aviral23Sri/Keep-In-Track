@@ -40,6 +40,9 @@ class AppSettingsModel extends HiveObject {
   @HiveField(11)
   bool subcategorySeedDone;
 
+  @HiveField(12)
+  bool smsAutoDetect; // auto-detect bank transactions from SMS
+
   AppSettingsModel({
     this.themeMode = 'system',
     this.isPinEnabled = false,
@@ -53,6 +56,7 @@ class AppSettingsModel extends HiveObject {
     this.dailyBudget,
     this.weeklyBudget,
     this.subcategorySeedDone = false,
+    this.smsAutoDetect = false,
   });
 
   AppSettingsModel copyWith({
@@ -68,6 +72,7 @@ class AppSettingsModel extends HiveObject {
     double? dailyBudget,
     double? weeklyBudget,
     bool? subcategorySeedDone,
+    bool? smsAutoDetect,
   }) {
     return AppSettingsModel(
       themeMode: themeMode ?? this.themeMode,
@@ -82,6 +87,7 @@ class AppSettingsModel extends HiveObject {
       dailyBudget: dailyBudget ?? this.dailyBudget,
       weeklyBudget: weeklyBudget ?? this.weeklyBudget,
       subcategorySeedDone: subcategorySeedDone ?? this.subcategorySeedDone,
+      smsAutoDetect: smsAutoDetect ?? this.smsAutoDetect,
     );
   }
 
@@ -117,6 +123,7 @@ class AppSettingsModel extends HiveObject {
         'dailyBudget': dailyBudget,
         'weeklyBudget': weeklyBudget,
         'subcategorySeedDone': subcategorySeedDone,
+        'smsAutoDetect': smsAutoDetect,
       };
 
   factory AppSettingsModel.fromJson(Map<String, dynamic> json) =>
@@ -133,5 +140,6 @@ class AppSettingsModel extends HiveObject {
         dailyBudget: (json['dailyBudget'] as num?)?.toDouble(),
         weeklyBudget: (json['weeklyBudget'] as num?)?.toDouble(),
         subcategorySeedDone: json['subcategorySeedDone'] as bool? ?? false,
+        smsAutoDetect: json['smsAutoDetect'] as bool? ?? false,
       );
 }

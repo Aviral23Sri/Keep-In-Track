@@ -43,3 +43,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local-only folders (not part of the app)
+/_backup/
+/Videos/
+/lib/data/mql5-mt5-algo-development-service/
+*.bak

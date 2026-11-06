@@ -5,9 +5,10 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../shared/widgets/gradient_app_bar.dart';
 import '../../shared/providers/dashboard_providers.dart';
 import '../../shared/providers/transaction_providers.dart';
+import '../../shared/providers/pending_sms_providers.dart';
+import '../../core/theme/app_colors.dart';
 import 'widgets/summary_card.dart';
 import 'widgets/transaction_tile.dart';
-
 import 'widgets/budget_status_bar.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -36,6 +37,79 @@ class DashboardScreen extends ConsumerWidget {
             ),
           ),
           
+          // ── Pending SMS Banner ───────────────────────────────────────────
+          SliverToBoxAdapter(
+            child: Consumer(
+              builder: (ctx, r, _) {
+                final count = r.watch(pendingSmsCountProvider);
+                if (count == 0) return const SizedBox();
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: InkWell(
+                    onTap: () => context.push('/pending-review'),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.primary,
+                            AppColors.primary.withValues(alpha: 0.75),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.sms_rounded,
+                                color: Colors.white, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '$count transaction${count > 1 ? "s" : ""} detected via SMS',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const Text(
+                                  'Tap to review and log',
+                                  style: TextStyle(
+                                      color: Colors.white70, fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right_rounded,
+                              color: Colors.white),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
           const SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),

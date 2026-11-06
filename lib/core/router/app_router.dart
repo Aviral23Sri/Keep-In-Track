@@ -8,6 +8,7 @@ import '../../features/auth/lock_screen.dart';
 import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/transactions/transaction_list_screen.dart';
 import '../../features/transactions/add_transaction_screen.dart';
+import '../../features/transactions/pending_review_screen.dart';
 import '../../features/categories/categories_screen.dart';
 import '../../features/categories/category_transactions_screen.dart';
 import '../../features/budget/budget_screen.dart';
@@ -41,9 +42,33 @@ GoRouter appRouter(AppRouterRef ref) {
         path: '/add-transaction',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) {
-          final id = state.uri.queryParameters['id'];
-          return AddTransactionScreen(transactionId: id);
+          final p = state.uri.queryParameters;
+          final id = p['id'];
+          // Prefill from SMS detection (optional params)
+          final amount    = double.tryParse(p['amount'] ?? '');
+          final type      = p['type'];
+          final merchant  = p['merchant'];
+          final mode      = p['paymentMode'];
+          final pendingId = p['pendingId'];
+          final dateMs    = int.tryParse(p['date'] ?? '');
+          final date      = dateMs != null
+              ? DateTime.fromMillisecondsSinceEpoch(dateMs)
+              : null;
+          return AddTransactionScreen(
+            transactionId:       id,
+            prefilledAmount:     amount,
+            prefilledType:       type,
+            prefilledMerchant:   merchant,
+            prefilledPaymentMode: mode,
+            prefilledDate:       date,
+            pendingId:           pendingId,
+          );
         },
+      ),
+      GoRoute(
+        path: '/pending-review',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const PendingReviewScreen(),
       ),
       GoRoute(
         path: '/transactions',

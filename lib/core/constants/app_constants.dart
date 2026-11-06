@@ -13,13 +13,14 @@ class AppConstants {
   static const String backupFileExtension = '.json';
 
   // Hive Box Names
-  static const String transactionBox = 'transactions';
-  static const String categoryBox = 'categories';
-  static const String budgetBox = 'budgets';
-  static const String merchantBox = 'merchants';
-  static const String settingsBox = 'settings';
-  static const String seedBox = 'seed_flags';
-  static const String subcategoryBox = 'subcategories';
+  static const String transactionBox   = 'transactions';
+  static const String categoryBox      = 'categories';
+  static const String budgetBox        = 'budgets';
+  static const String merchantBox      = 'merchants';
+  static const String settingsBox      = 'settings';
+  static const String seedBox          = 'seed_flags';
+  static const String subcategoryBox   = 'subcategories';
+  static const String pendingSmsBox    = 'pending_sms_txns'; // detected SMS queue
 
   // Hive Type IDs
   static const int transactionTypeId = 0;
@@ -52,8 +53,12 @@ class AppConstants {
   static const int chartAnimationMs = 800;
 
   // Notification IDs
-  static const int budgetAlertNotifId = 1001;
-  static const int recurringNotifId = 2001;
+  static const int budgetAlertNotifId  = 1001;
+  static const int recurringNotifId    = 2001;
+  static const int smsDetectNotifId    = 3001; // SMS auto-detect notification
+
+  // Native MethodChannel name
+  static const String smsChannel = 'com.keepintrack/sms';
 
   // Settings keys
   static const String keyThemeMode = 'theme_mode';

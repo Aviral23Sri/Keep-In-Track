@@ -4,11 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/services/sms_detector_service.dart';
 import '../../shared/providers/settings_providers.dart';
+import '../../shared/providers/pending_sms_providers.dart';
 import '../../shared/providers/transaction_providers.dart';
 import '../../data/repositories/backup_repository.dart';
 import '../../shared/widgets/gradient_app_bar.dart';
@@ -45,32 +48,184 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  /// Generates the backup JSON file and returns the [File] object.
+  Future<File> _buildBackupFile() async {
+    final json = await BackupRepository().exportBackupToJson();
+    final dir = await getTemporaryDirectory();
+    final fileName =
+        'kit_backup_${DateTime.now().toIso8601String().split('T')[0]}.json';
+    final file = File('${dir.path}/$fileName');
+    await file.writeAsString(json);
+    return file;
+  }
+
   Future<void> _exportBackup() async {
     try {
-      final json = await BackupRepository().exportBackupToJson();
-      final dir = await getTemporaryDirectory();
-      final file = File(
-          '${dir.path}/keep_in_track_backup_${DateTime.now().toIso8601String().split('T')[0]}.json');
-      await file.writeAsString(json);
+      final file = await _buildBackupFile();
+      if (!mounted) return;
+      _showExportBottomSheet(file);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed to prepare backup: $e')));
+      }
+    }
+  }
 
+  void _showExportBottomSheet(File tempFile) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Handle pill
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Text(
+                  'Export Backup',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  tempFile.path.split('/').last,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: Colors.grey),
+                ),
+                const SizedBox(height: 20),
+
+                // ── Save to Device ──────────────────────────────────────────
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.download_rounded,
+                        color: AppColors.primary),
+                  ),
+                  title: const Text('Save to Device',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Saves file to your Downloads folder'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _saveToDevice(tempFile);
+                  },
+                ),
+                const Divider(height: 1),
+
+                // ── Share ───────────────────────────────────────────────────
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.share_rounded, color: Colors.orange),
+                  ),
+                  title: const Text('Share',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Send via WhatsApp, Email, Drive…'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _shareBackupFile(tempFile);
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Saves the backup file to the app's external storage folder.
+  /// This folder is accessible from any file manager without special permissions.
+  Future<void> _saveToDevice(File tempFile) async {
+    try {
+      // getExternalStorageDirectory → /storage/emulated/0/Android/data/<pkg>/files
+      // This is visible in Files → Internal Storage → Android → data → keep_in_track → files
+      final extDir = await getExternalStorageDirectory();
+      if (extDir == null) throw Exception('External storage not available');
+
+      final destDir = Directory('${extDir.path}/Backups');
+      if (!await destDir.exists()) await destDir.create(recursive: true);
+
+      final destFile =
+          File('${destDir.path}/${tempFile.path.split('/').last}');
+      await tempFile.copy(destFile.path);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '✅ Saved to: Android/data/keep_in_track/files/Backups/',
+              style: const TextStyle(fontSize: 13),
+            ),
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Share',
+              onPressed: () => _shareBackupFile(destFile),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Could not save: $e')));
+      }
+    }
+  }
+
+  Future<void> _shareBackupFile(File file) async {
+    try {
       // ignore: deprecated_member_use
       final result = await Share.shareXFiles(
         [XFile(file.path)],
         text: 'Keep in Track Backup',
       );
-      if (result.status == ShareResultStatus.success) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Backup exported successfully!')));
-        }
+      if (result.status == ShareResultStatus.success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Backup shared successfully!')));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Failed to export: $e')));
+            .showSnackBar(SnackBar(content: Text('Failed to share: $e')));
       }
     }
   }
+
+
 
   Future<void> _importBackup() async {
     try {
@@ -207,6 +362,67 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         );
                   },
                 ),
+              const Divider(),
+              _buildSectionHeader('Auto-Detect Transactions'),
+              SwitchListTile(
+                secondary: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.sms_rounded,
+                      color: AppColors.primary, size: 22),
+                ),
+                title: const Text('SMS Transaction Detection'),
+                subtitle: const Text(
+                    'Auto-detect bank transactions from SMS and prompt to log them'),
+                value: settings.smsAutoDetect,
+                onChanged: (val) async {
+                  if (val) {
+                    // Request SMS permission first
+                    final status = await Permission.sms.request();
+                    if (!status.isGranted) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text(
+                                'SMS permission is required for this feature.'),
+                            action: SnackBarAction(
+                              label: 'Settings',
+                              onPressed: openAppSettings,
+                            ),
+                          ),
+                        );
+                      }
+                      return;
+                    }
+                  }
+                  // Update Hive settings
+                  ref
+                      .read(settingsControllerProvider.notifier)
+                      .updateSettings(
+                        settings.copyWith(smsAutoDetect: val),
+                      );
+                  // Sync with native SharedPreferences
+                  await SmsDetectorService.setEnabled(val);
+                },
+              ),
+              if (settings.smsAutoDetect) ...[  
+                ListTile(
+                  leading: const Icon(Icons.pending_actions_rounded,
+                      color: AppColors.primary),
+                  title: const Text('Review Pending'),
+                  subtitle: Consumer(builder: (ctx, r, _) {
+                    final count = r.watch(pendingSmsCountProvider);
+                    return Text(count == 0
+                        ? 'No pending transactions'
+                        : '$count transaction${count > 1 ? "s" : ""} waiting');
+                  }),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/pending-review'),
+                ),
+              ],
               const Divider(),
               _buildSectionHeader('Data Management'),
               ListTile(

@@ -89,9 +89,10 @@ class HiveDatabase {
       await settingsBox.put('settings', appSettings);
     }
 
-    // Subcategory seed runs independently — safe for existing installs
+    // Always re-seed missing default subcategories — idempotent, safe for all installs.
+    // This runs on every startup so subcategories are restored even after Clear All + Import.
+    await ensureDefaultSubcategories();
     if (!appSettings.subcategorySeedDone) {
-      await _seedSubcategories();
       appSettings = appSettings.copyWith(subcategorySeedDone: true);
       await settingsBox.put('settings', appSettings);
     }
@@ -166,10 +167,11 @@ class HiveDatabase {
     }
   }
 
-  static Future<void> _seedSubcategories() async {
+  /// Idempotently seeds all default subcategories that are missing from the box.
+  /// Safe to call on every app start. Used by both [seedIfNeeded] and [BackupRepository.importBackupFromJson].
+  static Future<void> ensureDefaultSubcategories() async {
     final box = subcategories;
     for (final sub in DefaultSubcategories.all) {
-      // Only add if not already present (idempotent)
       if (box.get(sub.id) == null) {
         final model = SubcategoryModel(
           id: sub.id,
@@ -180,6 +182,10 @@ class HiveDatabase {
         await box.put(sub.id, model);
       }
     }
+  }
+
+  static Future<void> _seedSubcategories() async {
+    await ensureDefaultSubcategories();
   }
 
   static Future<void> _seedMerchants() async {
@@ -473,6 +479,7 @@ class _AppSettingsModelAdapter extends TypeAdapter<AppSettingsModel> {
       dailyBudget: (f[9] as num?)?.toDouble(),
       weeklyBudget: (f[10] as num?)?.toDouble(),
       subcategorySeedDone: (f[11] as bool?) ?? false,
+      smsAutoDetect: (f[12] as bool?) ?? false, // NEW
     );
   }
 
@@ -485,6 +492,7 @@ class _AppSettingsModelAdapter extends TypeAdapter<AppSettingsModel> {
       7: obj.reminderTime, 8: obj.seedDone,
       9: obj.dailyBudget, 10: obj.weeklyBudget,
       11: obj.subcategorySeedDone,
+      12: obj.smsAutoDetect, // NEW
     });
   }
 }
