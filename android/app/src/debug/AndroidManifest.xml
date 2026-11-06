@@ -4,4 +4,11 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <application>
+        <!-- Debug-only: lets adb trigger the quick-save notification without an SMS. -->
+        <receiver
+            android:name=".DebugQuickSaveReceiver"
+            android:exported="true" />
+    </application>
 </manifest>

@@ -245,7 +245,7 @@ object QuickSaveNotifier {
         val selectedId: String?
 
         if (step == "cat") {
-            rv.setTextViewText(R.id.step_label, "Choose a category")
+            rv.setTextViewText(R.id.step_label, "$verb $amtStr · choose a category")
             items = cats.map { it.id to dotLabel(it.name, it.color) }
             selectedId = null
             rv.setViewVisibility(R.id.btn_back, android.view.View.GONE)
@@ -254,7 +254,7 @@ object QuickSaveNotifier {
             val catName = cat?.name ?: "Category"
             rv.setTextViewText(
                 R.id.step_label,
-                if (cat?.subs.isNullOrEmpty()) catName else "$catName › choose a subcategory (optional)"
+                if (cat?.subs.isNullOrEmpty()) "$amtStr · $catName" else "$amtStr · $catName › subcategory (optional)"
             )
             items = (cat?.subs ?: emptyList()).map { it.id to it.name }
             selectedId = state.optString("subId").ifEmpty { null }
