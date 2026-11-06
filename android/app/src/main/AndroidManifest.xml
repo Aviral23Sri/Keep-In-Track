@@ -40,6 +40,11 @@
             </intent-filter>
         </receiver>
 
+        <!-- Handles taps on the quick-save notification (category / subcategory / Save) -->
+        <receiver
+            android:name=".QuickSaveReceiver"
+            android:exported="false" />
+
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

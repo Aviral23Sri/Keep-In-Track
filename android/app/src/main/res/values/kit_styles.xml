@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Styles for the quick-save notification (layout/notif_quick_save.xml). -->
+    <style name="KitChip">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">32dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_margin">3dp</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">8dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:background">@drawable/kit_chip</item>
+        <item name="android:textAppearance">@style/TextAppearance.Compat.Notification</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="KitButtonSecondary">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">34dp</item>
+        <item name="android:layout_marginEnd">6dp</item>
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingEnd">14dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:background">@drawable/kit_button_secondary</item>
+        <item name="android:textAppearance">@style/TextAppearance.Compat.Notification</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+</resources>

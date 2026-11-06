@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
 import 'core/services/sms_detector_service.dart';
+import 'core/services/quick_save_service.dart';
 import 'shared/providers/settings_providers.dart';
 import 'shared/providers/pending_sms_providers.dart';
+import 'shared/providers/transaction_providers.dart';
 
 class KeepInTrackApp extends ConsumerStatefulWidget {
   const KeepInTrackApp({super.key});
@@ -39,6 +41,12 @@ class _KeepInTrackAppState extends ConsumerState<KeepInTrackApp>
   }
 
   Future<void> _checkSms() async {
+    // Transactions saved from the quick-save notification while the app was
+    // in the background. Runs before checkPending so they aren't re-queued.
+    final imported = await QuickSaveService.importSaved();
+    if (imported > 0) ref.invalidate(transactionsControllerProvider);
+    await QuickSaveService.syncCatalog();
+
     final settings = ref.read(settingsControllerProvider).value;
     if (settings?.smsAutoDetect != true) return;
     await SmsDetectorService.checkPending();

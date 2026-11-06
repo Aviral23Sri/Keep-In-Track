@@ -88,8 +88,16 @@ class SmsReceiver : BroadcastReceiver() {
                 obj.put("notified", true)
 
                 val type = if (isCredit && !isDebit) "income" else "expense"
+                val id   = notifId++
+                // Lets QuickSaveNotifier drop this entry once it's saved from the notification.
+                obj.put("notifId", id)
                 try {
-                    showNativeNotification(context, amount, type, notifId++)
+                    // Expandable notification with category → subcategory → Save.
+                    // Falls back to the plain one until Flutter has synced categories.
+                    val shown = QuickSaveNotifier.show(
+                        context, id, amount, type, paymentModeOf(body), sms.ts, body
+                    )
+                    if (!shown) showNativeNotification(context, amount, type, id)
                 } catch (e: Exception) {
                     // Notification failed (e.g. permission revoked): let Flutter retry on open.
                     obj.put("notified", false)
@@ -102,6 +110,15 @@ class SmsReceiver : BroadcastReceiver() {
         // commit() instead of apply(): the process can be killed right after
         // onReceive returns when the app is in the background.
         prefs.edit().putString(KEY_SMS_LIST, currentList.toString()).commit()
+    }
+
+    // Mirrors the payment-mode detection in sms_parser.dart.
+    private fun paymentModeOf(body: String): String = when {
+        Regex("""\b(upi|gpay|phonepe|paytm|bhim|neft/upi)\b""", RegexOption.IGNORE_CASE)
+            .containsMatchIn(body) -> "upi"
+        Regex("""\b(card|pos|swipe|credit card|debit card|cc|dc)\b""", RegexOption.IGNORE_CASE)
+            .containsMatchIn(body) -> "card"
+        else -> "bankTransfer"
     }
 
     // ── Native notification (no Flutter engine needed) ─────────────────────────
